@@ -1,0 +1,12 @@
+*.iml
+.DS_Store
+.idea/
+.idea_modules/
+spark-warehouse/
+target/
+checkpoints/
+s3checkpoints/
+dependency-reduced-pom.xml
+testDir/
+ptcheckpoint*/
+ptconsumer*/
