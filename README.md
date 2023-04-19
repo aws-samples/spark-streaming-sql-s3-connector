@@ -4,7 +4,7 @@ An Apache Spark Structure Streaming S3 connector for reading S3 files using Amaz
 
 ## Archicture Overview
 
-![s3-connector](./docs/image/s3-connector-overview.png)
+![s3-connector](./docs/images/s3-connector-overview.png)
 
 1. Configure [Amazon S3  Event Notifications](https://docs.aws.amazon.com/AmazonS3/latest/userguide/NotificationHowTo.html) to send `s3:ObjectCreated:*` events with specified prefix to SQS
 2. The S3 connector discovers new files via `ObjectCreated` S3 events in AWS SQS. 
