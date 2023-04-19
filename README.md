@@ -189,7 +189,7 @@ Name | Default                                 | Description
 spark.s3conn.fileFormat| required, no default value              |file format for the s3 files stored on Amazon S3
 spark.s3conn.queueRegion| required, no default value              |AWS region where queue is created
 spark.s3conn.queueUrl| required, no default value              |SQS queue url, e.g. https://sqs.us-east-1.amazonaws.com/<account_id>/<queue_name>
-spark.s3conn.queueType/required, SQS| only support SQS                        
+spark.s3conn.queueType| required, SQS                           | only support SQS                        
 spark.s3conn.queueFetchWaitTimeoutSeconds| requred, 2 * longPollingWaitTimeSeconds |wait time (in seconds) for fetching messages from SQS at each trigger. Message fetching is finished either messages fetched is greater than maxFilerPerTrigger or queueFetchWaitTimeoutSeconds expires.
 spark.s3conn.maxFilesPerTrigger| required,100                            |maximum number of files to process in a microbatch. -1 for unlimited
 spark.s3conn.maxFileAge| required,15d                            |maximum age of a file that can be stored in RocksDB. Files older than this will be ignored.
