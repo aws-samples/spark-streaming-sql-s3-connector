@@ -1,6 +1,6 @@
-# Apache Spark Structure Streaming S3 Connector
+# Apache Spark Structured Streaming S3 Connector
 
-An Apache Spark Structure Streaming S3 connector for reading S3 files using Amazon S3 event notifications to AWS SQS.
+An Apache Spark Structured Streaming S3 connector for reading S3 files using Amazon S3 event notifications to AWS SQS.
 
 ## Archicture Overview
 
@@ -8,22 +8,25 @@ An Apache Spark Structure Streaming S3 connector for reading S3 files using Amaz
 
 1. Configure [Amazon S3  Event Notifications](https://docs.aws.amazon.com/AmazonS3/latest/userguide/NotificationHowTo.html) to send `s3:ObjectCreated:*` events with specified prefix to SQS
 2. The S3 connector discovers new files via `ObjectCreated` S3 events in AWS SQS. 
-3. The files' metadata are persisted in RocksDB in the checkpoint location together with Spark Structure streaming engine maintained offset. This ensures that data is ingested exactly once. (End to end exactly once requires the data sink to be idempotent.)
+3. The files' metadata are persisted in RocksDB in the checkpoint location together with Spark Structured Streaming engine maintained offset. This ensures that data is ingested exactly once. (End to end exactly once requires the data sink to be idempotent.)
 4. Driver distributes the S3 file list to executors
 5. Executors read the S3 files
-6. After successful data sink processing, Spark Structure streaming engine commit the batch
+6. After successful data sink processing, Spark Structured Streaming engine commit the batch
+
+The RocksDB used by this connector is self-contained. The Spark structured streaming application using this connector is free to use any state store backend.
 
 ## How to build
 **Prerequisite**: [install Rocksdb](https://github.com/facebook/rocksdb/blob/main/INSTALL.md)
 
-Clone spark-sql-kinesis from the source repository on GitHub.
+Clone `spark-streaming-sql-s3-connector` from the source repository on GitHub.
 
 ```
+git clone https://github.com/aws-samples/spark-streaming-sql-s3-connector.git
 mvn clean install -DskipTests
 ```
 This will create *target/spark-streaming-sql-s3-connector-<versiion>.jar* file which contains the connector code and its dependencies. The jar file will also be installed to local maven repository.
 
-Current version is compatible with spark 3.2 and above.
+Current version is compatible with Spark 3.2 and above.
 
 ## How to test
 
@@ -182,7 +185,7 @@ spark-submit --class pt.spark.sql.streaming.connector.DataGenerator --jars ~/spa
 ```
 
 ## How to configure
-Spark Structure Streaming S3 connector supports the following settings.
+Spark Structured Streaming S3 connector supports the following settings.
 
 Name | Default                                 | Description
 --- |:----------------------------------------| ---
@@ -206,7 +209,7 @@ spark.s3conn.sqs.keepMessageForConsumerError| false                             
 
 ## How to use S3 event notifications for multiple applications
 
-If one S3 path's event notifications need to be consumed by multiple Spark Structure Streaming applications, SNS can be used to fanout to Amazon SQS queues. The message flow is S3 event notifications -> SNS -> SQS. When an S3 event notification is published to the SNS topic, Amazon SNS sends the notification to each of the subscribed SQS queues.
+If one S3 path's event notifications need to be consumed by multiple Spark Structured Streaming applications, SNS can be used to fanout to Amazon SQS queues. The message flow is S3 event notifications -> SNS -> SQS. When an S3 event notification is published to the SNS topic, Amazon SNS sends the notification to each of the subscribed SQS queues.
 
 ## Security
 
