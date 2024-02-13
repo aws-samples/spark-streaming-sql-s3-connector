@@ -20,7 +20,7 @@
 
   <groupId>com.amazonaws</groupId>
   <artifactId>spark-streaming-sql-s3-connector</artifactId>
-  <version>0.0.1</version>
+  <version>0.0.2</version>
   <packaging>jar</packaging>
   <name>Spark Structure Streaming S3 Connector</name>
 
@@ -54,6 +54,11 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sqs</artifactId>
+      <version>${aws.java.sdk2.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sts</artifactId>
       <version>${aws.java.sdk2.version}</version>
     </dependency>
     <dependency>
@@ -158,7 +163,6 @@
           <artifactId>commons-logging</artifactId>
         </exclusion>
       </exclusions>
-      <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
@@ -201,6 +205,11 @@
                     <include>software.amazon.awssdk:apache-client:*</include>
                     <include>software.amazon.awssdk:arns:*</include>
                     <include>software.amazon.awssdk:auth:*</include>
+                    <include>software.amazon.awssdk:sts:*</include>
+                    <include>software.amazon.awssdk:netty-nio-client:*</include>
+                    <include>software.amazon.awssdk:http-auth-spi:*</include>
+                    <include>software.amazon.awssdk:http-auth-aws:*</include>
+                    <include>software.amazon.awssdk:http-auth:*</include>
                     <include>software.amazon.awssdk:aws-core:*</include>
                     <include>software.amazon.awssdk:aws-query-protocol:*</include>
                     <include>software.amazon.awssdk:aws-xml-protocol:*</include>

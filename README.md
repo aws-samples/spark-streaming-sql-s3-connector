@@ -26,6 +26,8 @@ mvn clean install -DskipTests
 ```
 This will create *target/spark-streaming-sql-s3-connector-<versiion>.jar* file which contains the connector code and its dependencies. The jar file will also be installed to local maven repository.
 
+The jar file can also be downloaded at https://awslabs-code-us-east-1.s3.amazonaws.com/spark-streaming-sql-s3-connector/spark-streaming-sql-s3-connector-0.0.1.jar. Change the jar file name based on version
+
 Current version is compatible with Spark 3.2 and above.
 
 ## How to test

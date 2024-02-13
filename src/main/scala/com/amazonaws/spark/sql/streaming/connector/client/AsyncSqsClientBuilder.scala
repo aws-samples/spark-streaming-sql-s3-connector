@@ -16,11 +16,14 @@
  */
 package com.amazonaws.spark.sql.streaming.connector.client
 
-import com.amazonaws.spark.sql.streaming.connector.{FileMetadata, S3ConnectorSourceOptions}
-import com.amazonaws.spark.sql.streaming.connector.Utils.DEFAULT_CONNECTION_ACQUIRE_TIMEOUT
 import java.time.Duration
 import java.util.function.Consumer
+
 import scala.language.implicitConversions
+
+import com.amazonaws.spark.sql.streaming.connector.{ConnectorAwsCredentialsProvider, FileMetadata, S3ConnectorSourceOptions}
+import com.amazonaws.spark.sql.streaming.connector.Utils.DEFAULT_CONNECTION_ACQUIRE_TIMEOUT
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.core.retry.RetryPolicy
 import software.amazon.awssdk.core.retry.backoff.BackoffStrategy
@@ -33,6 +36,9 @@ class AsyncSqsClientBuilder[T] extends AsyncClientBuilder[T] {
 
   var options: S3ConnectorSourceOptions = _
   var consumer: (FileMetadata[T]) => Unit = _
+
+  private val credentialsProvider: AwsCredentialsProvider =
+    ConnectorAwsCredentialsProvider.builder.build().provider
 
   implicit def toConsumer[A](function: A => Unit): Consumer[A] = new Consumer[A]() {
     override def accept(arg: A): Unit = function.apply(arg)
@@ -77,6 +83,7 @@ class AsyncSqsClientBuilder[T] extends AsyncClientBuilder[T] {
       )
       .region(Region.of(options.queueRegion))
       .overrideConfiguration(clientOverrideConfiguration)
+      .credentialsProvider(credentialsProvider)
       .build
 
   }
