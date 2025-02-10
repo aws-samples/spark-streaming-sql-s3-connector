@@ -20,7 +20,7 @@
 
   <groupId>com.amazonaws</groupId>
   <artifactId>spark-streaming-sql-s3-connector</artifactId>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <packaging>jar</packaging>
   <name>Spark Structure Streaming S3 Connector</name>
 

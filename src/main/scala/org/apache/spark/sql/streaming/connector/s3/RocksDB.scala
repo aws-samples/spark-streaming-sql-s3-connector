@@ -160,7 +160,7 @@ class RocksDB(
   def remove(key: Array[Byte]): Array[Byte] = {
     val value = writeBatch.getFromBatchAndDB(db, readOptions, key)
     if (value != null) {
-      writeBatch.remove(key)
+      writeBatch.delete(key)
       numKeysOnWritingVersion -= 1
     }
     value
