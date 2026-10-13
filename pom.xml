@@ -26,7 +26,7 @@
 
     <properties>
         <sbt.project.name>s3-sqs-connector</sbt.project.name>
-        <spark.version>3.2.1</spark.version>
+        <spark.version>3.5.8</spark.version>
         <hadoop.version>3.0.1</hadoop.version>
         <scala.binary.version>2.12</scala.binary.version>
         <scala.maven.version>4.6.3</scala.maven.version>
