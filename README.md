@@ -205,6 +205,9 @@ spark.s3conn.reprocessEndBatchId| optional                                |end b
 spark.s3conn.reprocessDryRun| optional,true                           |a dry run to list all the files to be reprocessed.
 spark.s3conn.sqs.longPollingWaitTimeSeconds| 10                                      |wait time (in seconds) for SQS client long polling
 spark.s3conn.sqs.maxConcurrency| 50                                      |number of parallel connections to Amazon SQS queue
+spark.s3conn.sqs.maxPoolSize| 200                                     |maximum number of SQS consumer threads; the pool size is the smaller of this value and `maxConcurrency`
+spark.s3conn.sqs.connectionAcquisitionTimeoutSeconds| 60                                      |maximum time (in seconds) to wait for a free connection of the SQS HTTP client
+spark.s3conn.sqs.maxPendingAcquires| optional, SDK default (10000)           |maximum number of requests waiting for a free connection of the SQS HTTP client
 spark.s3conn.sqs.maxRetries| 10                                      |maximum number of consecutive retries in case of a SQS client connection failure before giving up
 spark.s3conn.sqs.visibilityTimeoutSeconds| 60                                      |SQS message visibility timeout
 spark.s3conn.sqs.keepMessageForConsumerError| false                                   |when set to true, the invalid messages with following reasons in SQS will be kept 1. the file is expired 2. the file doesn't match glob pattern 3. the file is already processed and persisted in RocksDB. This can be used with DLQ when for debug purpose

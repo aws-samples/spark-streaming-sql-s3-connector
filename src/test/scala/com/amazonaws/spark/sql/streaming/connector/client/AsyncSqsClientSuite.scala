@@ -23,7 +23,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ArrayBuffer
 
 import com.amazonaws.spark.sql.streaming.connector.{FileMetadata, S3ConnectorSourceOptions, S3ConnectorTestBase}
-import com.amazonaws.spark.sql.streaming.connector.S3ConnectorSourceOptions.{MAX_FILES_PER_TRIGGER, QUEUE_URL, SQS_KEEP_MESSAGE_FOR_CONSUMER_ERROR, SQS_MAX_CONCURRENCY}
+import com.amazonaws.spark.sql.streaming.connector.S3ConnectorSourceOptions.{MAX_FILES_PER_TRIGGER, QUEUE_URL, SQS_KEEP_MESSAGE_FOR_CONSUMER_ERROR, SQS_MAX_CONCURRENCY, SQS_MAX_POOL_SIZE}
 import com.amazonaws.spark.sql.streaming.connector.TestUtils.{doReturnMock, verifyMetrics}
 import com.amazonaws.spark.sql.streaming.connector.client.AsyncSqsClientImpl.MAX_SQS_BATCH_SIZE
 import org.mockito.ArgumentMatchers.any
@@ -538,6 +538,31 @@ class AsyncSqsClientSuite extends S3ConnectorTestBase{
     processResult.get shouldBe false
 
     verifyMetrics(asyncClient.metrics, expectedDeleteMessageFailedCount = 1)
+  }
+
+  private def consumerPoolSize(options: Map[String, String]): Int = {
+    val client = new AsyncSqsClientImpl(mockAsyncClient, S3ConnectorSourceOptions(options), None)
+    try {
+      client.poolSize
+    } finally {
+      client.close()
+    }
+  }
+
+  test ("consumer pool is capped at 200 by default") {
+    consumerPoolSize(defaultOptionMap + (SQS_MAX_CONCURRENCY -> "500")) shouldBe 200
+  }
+
+  test ("consumer pool follows maxPoolSize when it is above the old fixed limit") {
+    consumerPoolSize(defaultOptionMap + (SQS_MAX_CONCURRENCY -> "500", SQS_MAX_POOL_SIZE -> "400")) shouldBe 400
+  }
+
+  test ("consumer pool is limited by maxPoolSize") {
+    consumerPoolSize(defaultOptionMap + (SQS_MAX_CONCURRENCY -> "500", SQS_MAX_POOL_SIZE -> "20")) shouldBe 20
+  }
+
+  test ("consumer pool is limited by maxConcurrency when maxPoolSize is larger") {
+    consumerPoolSize(defaultOptionMap + (SQS_MAX_CONCURRENCY -> "30", SQS_MAX_POOL_SIZE -> "1000")) shouldBe 30
   }
 
   test ("run SQS async fetch") {

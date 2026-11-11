@@ -22,7 +22,6 @@ import java.util.function.Consumer
 import scala.language.implicitConversions
 
 import com.amazonaws.spark.sql.streaming.connector.{ConnectorAwsCredentialsProvider, FileMetadata, S3ConnectorSourceOptions}
-import com.amazonaws.spark.sql.streaming.connector.Utils.DEFAULT_CONNECTION_ACQUIRE_TIMEOUT
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
 import software.amazon.awssdk.core.retry.RetryPolicy
@@ -73,14 +72,14 @@ class AsyncSqsClientBuilder[T] extends AsyncClientBuilder[T] {
       .retryPolicy(retryPolicy)
       .build
 
+    val httpClientBuilder = NettyNioAsyncHttpClient
+      .builder()
+      .maxConcurrency(options.sqsMaxConcurrency)
+      .connectionAcquisitionTimeout(Duration.ofSeconds(options.sqsConnectionAcquisitionTimeoutSeconds))
+    options.sqsMaxPendingAcquires.foreach(httpClientBuilder.maxPendingConnectionAcquires(_))
+
     SqsAsyncClient.builder
-      .httpClient(
-        NettyNioAsyncHttpClient
-        .builder()
-        .maxConcurrency(options.sqsMaxConcurrency)
-        .connectionAcquisitionTimeout(Duration.ofSeconds(DEFAULT_CONNECTION_ACQUIRE_TIMEOUT))
-        .build()
-      )
+      .httpClient(httpClientBuilder.build())
       .region(Region.of(options.queueRegion))
       .overrideConfiguration(clientOverrideConfiguration)
       .credentialsProvider(credentialsProvider)
