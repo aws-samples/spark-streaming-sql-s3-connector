@@ -197,6 +197,14 @@
                 <goal>shade</goal>
               </goals>
               <configuration>
+                <!-- The shaded jar (the one to pass to spark-submit with the jars option) is attached with classifier
+                     spark<spark.version>, e.g. spark-streaming-sql-s3-connector-0.0.3-spark3.5.4.jar.
+                     The main jar without classifier is the thin, unshaded jar. -->
+                <shadedArtifactAttached>true</shadedArtifactAttached>
+                <shadedClassifierName>spark${spark.version}</shadedClassifierName>
+                <!-- Keep the real POM: one POM serves every classifier of this GAV, and a reduced POM
+                     would strip the SDK dependencies the thin main jar needs. -->
+                <createDependencyReducedPom>false</createDependencyReducedPom>
                 <artifactSet>
                   <includes>
                     <include>software.amazon.awssdk:sqs:*</include>
@@ -289,6 +297,10 @@
               <goals>
                 <goal>test-jar</goal>
               </goals>
+              <configuration>
+                <!-- tests jar is per Spark line too (Scala 2.12 vs 2.13), so name it per Spark version -->
+                <classifier>tests-spark${spark.version}</classifier>
+              </configuration>
             </execution>
           </executions>
         </plugin>

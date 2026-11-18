@@ -7,7 +7,9 @@ Connector version: 0.0.3. One source tree, one Maven profile per Spark line, one
 - Profiles `spark-3.2`, `spark-3.3`, `spark-3.4`, `spark-3.5`, `spark-4.0`, `spark-4.1` set Scala, Hadoop (for the `hadoop-aws` test dependency), Java target and the Spark 4.1 source shim.
 - The exact release is chosen with `-Dspark.version=X.Y.Z`. No branch per version.
 - Tag: `v0.0.3-spark<spark-version>`, annotated, local only. The tag message holds the build command.
-- Build command: `mvn -Pdefault-test,<profile> -Dspark.version=<version> test` (`default-test` must be listed, because `-P` switches off the default profile).
+- Build command: `mvn -Pdefault-test,<profile> -Dspark.version=<version> package` (runs the unit tests too) (`default-test` must be listed, because `-P` switches off the default profile).
+- Jar: `mvn -Pdefault-test,<profile> -Dspark.version=<version> package` makes the shaded jar `target/spark-streaming-sql-s3-connector-0.0.3-spark<version>.jar` (Maven classifier `spark<version>`, from `${spark.version}`). Use that one with `--jars`. `target/spark-streaming-sql-s3-connector-0.0.3.jar` (no Spark suffix) is the thin jar without the bundled SDK. The tests jar is `spark-streaming-sql-s3-connector-0.0.3-tests-spark<version>.jar`.
+- Maven repo: the shaded and tests jars have a per-Spark classifier, but the thin jar, the javadoc jar and the POM are the same GAV (`0.0.3`) for all 17 builds. Deploy those from one build only; a release repo refuses a second upload of them.
 - JDK: 11 for 3.x, 17 for 4.x. A jar is built per Spark line and must run on that line (RocksDB, Scala 2.12/2.13 and Spark internals differ).
 - EMR `-amzn` builds are tagged by the open-source base version (3.5.4-amzn-0 -> `v0.0.3-spark3.5.4`). The connector uses only open-source Spark classes, but it was not run on the `-amzn` jars.
 
@@ -15,25 +17,25 @@ Connector version: 0.0.3. One source tree, one Maven profile per Spark line, one
 
 Spark/Scala/Hadoop/rocksdbjni columns are what the Spark open-source release ships (Maven Central `spark-parent` and `spark-sql` poms, e.g. https://repo1.maven.org/maven2/org/apache/spark/spark-parent_2.12/3.5.4/spark-parent_2.12-3.5.4.pom). Release mapping comes from the AWS docs listed below the table.
 
-| Spark | Scala | Hadoop | rocksdbjni | Profile / JDK | EMR releases | Glue |
-|---|---|---|---|---|---|---|
-| 3.2.1 | 2.12.15 | 3.3.1 | 6.20.3 | spark-3.2 / 11 | 6.7.0 | |
-| 3.3.0 | 2.12.15 | 3.3.2 | 6.20.3 | spark-3.3 / 11 | 6.8.x, 6.9.x | 4.0 |
-| 3.3.1 | 2.12.15 | 3.3.2 | 6.20.3 | spark-3.3 / 11 | 6.10.x | |
-| 3.3.2 | 2.12.15 | 3.3.2 | 6.20.3 | spark-3.3 / 11 | 6.11.x | |
-| 3.4.0 | 2.12.17 | 3.3.4 | 7.9.2 | spark-3.4 / 11 | 6.12.0 | |
-| 3.4.1 | 2.12.17 | 3.3.4 | 7.9.2 | spark-3.4 / 11 | 6.13.0, 6.14.0, 6.15.0 | |
-| 3.5.0 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.0.0, 7.1.0 | |
-| 3.5.1 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.2.0, 7.3.0 | |
-| 3.5.2 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.4.0, 7.5.0 | |
-| 3.5.3 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.6.0, 7.7.0 | |
-| 3.5.4 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.8.0 | 5.0 |
-| 3.5.5 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.9.0, 7.10.0 | |
-| 3.5.6 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.11.0, 7.12.0, 7.13.0 | 5.1 |
-| 3.5.8 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.14.0 | |
-| 4.0.2 | 2.13.16 | 3.4.1 | 9.8.4 | spark-4.0 / 17 | emr-spark-8.0.0 | |
-| 4.1.1 | 2.13.17 | 3.4.2 | 9.8.4 | spark-4.1 / 17 | emr-spark-8.1.0 | 6.0 |
-| 4.1.3 | 2.13.17 | 3.4.2 | 9.8.4 | spark-4.1 / 17 | emr-spark-8.2.0 | |
+| Spark | Scala | Hadoop | rocksdbjni | Profile / JDK | EMR releases | Glue | Shaded jar |
+|---|---|---|---|---|---|---|---|
+| 3.2.1 | 2.12.15 | 3.3.1 | 6.20.3 | spark-3.2 / 11 | 6.7.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.2.1.jar` |
+| 3.3.0 | 2.12.15 | 3.3.2 | 6.20.3 | spark-3.3 / 11 | 6.8.x, 6.9.x | 4.0 | `spark-streaming-sql-s3-connector-0.0.3-spark3.3.0.jar` |
+| 3.3.1 | 2.12.15 | 3.3.2 | 6.20.3 | spark-3.3 / 11 | 6.10.x | | `spark-streaming-sql-s3-connector-0.0.3-spark3.3.1.jar` |
+| 3.3.2 | 2.12.15 | 3.3.2 | 6.20.3 | spark-3.3 / 11 | 6.11.x | | `spark-streaming-sql-s3-connector-0.0.3-spark3.3.2.jar` |
+| 3.4.0 | 2.12.17 | 3.3.4 | 7.9.2 | spark-3.4 / 11 | 6.12.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.4.0.jar` |
+| 3.4.1 | 2.12.17 | 3.3.4 | 7.9.2 | spark-3.4 / 11 | 6.13.0, 6.14.0, 6.15.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.4.1.jar` |
+| 3.5.0 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.0.0, 7.1.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.0.jar` |
+| 3.5.1 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.2.0, 7.3.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.1.jar` |
+| 3.5.2 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.4.0, 7.5.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.2.jar` |
+| 3.5.3 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.6.0, 7.7.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.3.jar` |
+| 3.5.4 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.8.0 | 5.0 | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.4.jar` |
+| 3.5.5 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.9.0, 7.10.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.5.jar` |
+| 3.5.6 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.11.0, 7.12.0, 7.13.0 | 5.1 | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.6.jar` |
+| 3.5.8 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.14.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.8.jar` |
+| 4.0.2 | 2.13.16 | 3.4.1 | 9.8.4 | spark-4.0 / 17 | emr-spark-8.0.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark4.0.2.jar` |
+| 4.1.1 | 2.13.17 | 3.4.2 | 9.8.4 | spark-4.1 / 17 | emr-spark-8.1.0 | 6.0 | `spark-streaming-sql-s3-connector-0.0.3-spark4.1.1.jar` |
+| 4.1.3 | 2.13.17 | 3.4.2 | 9.8.4 | spark-4.1 / 17 | emr-spark-8.2.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark4.1.3.jar` |
 
 Not included (below 3.2.1): Glue 3.0 = Spark 3.1.1, EMR 6.6.0 = 3.2.0 and older.
 EMR 8.x here means the separate `emr-spark-8.x` release train (the multi-engine `emr-8.0.0` does not exist yet, per the EMR page below).

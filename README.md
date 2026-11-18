@@ -24,9 +24,11 @@ Clone `spark-streaming-sql-s3-connector` from the source repository on GitHub.
 git clone https://github.com/aws-samples/spark-streaming-sql-s3-connector.git
 mvn clean install -DskipTests
 ```
-This will create *target/spark-streaming-sql-s3-connector-<versiion>.jar* file which contains the connector code and its dependencies. The jar file will also be installed to local maven repository.
+Without a profile this builds for Spark 3.2.1. To build for a given Spark release, pick the profile of its Spark line and the exact version, e.g. `mvn -Pdefault-test,spark-3.5 -Dspark.version=3.5.4 clean install -DskipTests` (JDK 11 for Spark 3.x, JDK 17 for Spark 4.x). See `MATRIX.md` for the profiles and the EMR and Glue releases.
 
-The jar file can also be downloaded at https://awslabs-code-us-east-1.s3.amazonaws.com/spark-streaming-sql-s3-connector/spark-streaming-sql-s3-connector-0.0.1.jar. Change the jar file name based on version
+This will create *target/spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar* (for example `spark-streaming-sql-s3-connector-0.0.3-spark3.5.4.jar`), the shaded jar which contains the connector code and its dependencies (relocated). Use this jar with `--jars`. The jar name carries the Spark version it was built for (Maven classifier `spark<spark-version>`). The test classes are in *spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar*. *target/spark-streaming-sql-s3-connector-<version>.jar* without the Spark suffix is the thin jar that does not bundle its dependencies; do not use it with `--jars`. The jars will also be installed to local maven repository.
+
+The jar file of release 0.0.1 can also be downloaded at https://awslabs-code-us-east-1.s3.amazonaws.com/spark-streaming-sql-s3-connector/spark-streaming-sql-s3-connector-0.0.1.jar (older releases use the name without the Spark suffix).
 
 Current version is compatible with Spark 3.2 and above.
 
@@ -125,6 +127,15 @@ After the connector jar is install in local Maven repository, configure your pro
     <groupId>com.amazonaws</groupId>
     <artifactId>spark-streaming-sql-s3-connector</artifactId>
     <version>{version}</version>
+    <!-- shaded jar for your Spark release, e.g. spark3.5.4 -->
+    <classifier>spark{spark-version}</classifier>
+    <!-- the shaded jar already bundles its dependencies (relocated); do not pull the unrelocated ones -->
+    <exclusions>
+        <exclusion>
+            <groupId>*</groupId>
+            <artifactId>*</artifactId>
+        </exclusion>
+    </exclusions>
 </dependency>
 ```
 
@@ -163,12 +174,12 @@ val inputDf = spark
   .load()
 ```
 
-A full running example is at `src/test/scala/pt/spark/sql/streaming/connector/DataConsumer.scala` which is included in `spark-streaming-sql-s3-connector-<version>-tests.jar`.
+A full running example is at `src/test/scala/pt/spark/sql/streaming/connector/DataConsumer.scala` which is included in `spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar`.
 
-Use following command to submit to Spark on Amazon EMR (Assume `spark-streaming-sql-s3-connector-<version>.jar` and `spark-streaming-sql-s3-connector-<version>-tests.jar` are copied to EMR master node and under current directory).
+Use following command to submit to Spark on Amazon EMR (Assume `spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar` and `spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar` are copied to EMR master node and under current directory).
 
 ```bash
-spark-submit --class pt.spark.sql.streaming.connector.DataConsumer --deploy-mode cluster --jars spark-streaming-sql-s3-connector-<version>.jar spark-streaming-sql-s3-connector-<version>-tests.jar  <s3 new file root path> <SQS URL> csv <checkpoint location> <s3 path to write result>
+spark-submit --class pt.spark.sql.streaming.connector.DataConsumer --deploy-mode cluster --jars spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar  <s3 new file root path> <SQS URL> csv <checkpoint location> <s3 path to write result>
 ```
 This application receives s3 event notfication from `<SQS URL>`, reads the new files from `<s3 new file root path>` and save the result to `<s3 path to write result>`.  
 
@@ -183,7 +194,7 @@ Note: `spark.hadoop.fs.s3.impl` instead of `spark.hadoop.fs.s3a.impl` is used so
 Run below to generate the S3 test files to be consumed by `pt.spark.sql.streaming.connector.DataConsumer`
 
 ```bash
-spark-submit --class pt.spark.sql.streaming.connector.DataGenerator --jars ~/spark-streaming-sql-s3-connector-<version>-SNAPSHOT.jar ~/spark-streaming-sql-s3-connector-<version>-SNAPSHOT-tests.jar <s3 new file root path> <number of rows to generate> <number of partitions> <partition prefix string>
+spark-submit --class pt.spark.sql.streaming.connector.DataGenerator --jars ~/spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar ~/spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar <s3 new file root path> <number of rows to generate> <number of partitions> <partition prefix string>
 ```
 
 ## How to configure
