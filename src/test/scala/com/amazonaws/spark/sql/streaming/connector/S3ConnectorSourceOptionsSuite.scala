@@ -52,6 +52,25 @@ class S3ConnectorSourceOptionsSuite extends S3ConnectorTestBase  {
 
     }
 
+    test("sqs options are read from the one-dot keys") {
+        val option = S3ConnectorSourceOptions(defaultOptionMap + ("spark.s3conn.sqs.maxRetries" -> "3")
+          + ("spark.s3conn.sqs.maxConcurrency" -> "7"))
+        S3ConnectorSourceOptions.SQS_MAX_RETRIES shouldBe "spark.s3conn.sqs.maxRetries"
+        option.sqsMaxRetries shouldBe 3
+        option.sqsMaxConcurrency shouldBe 7
+    }
+
+    test("sqs options still accept the legacy two-dot keys") {
+        val option = S3ConnectorSourceOptions(defaultOptionMap + ("spark.s3conn..sqs.maxRetries" -> "4"))
+        option.sqsMaxRetries shouldBe 4
+    }
+
+    test("one-dot sqs key wins over the legacy two-dot key") {
+        val option = S3ConnectorSourceOptions(defaultOptionMap + ("spark.s3conn..sqs.maxRetries" -> "4")
+          + ("spark.s3conn.sqs.maxRetries" -> "5"))
+        option.sqsMaxRetries shouldBe 5
+    }
+
     test("maxFilesPerTrigger given a value") {
         val option = S3ConnectorSourceOptions(defaultOptionMap + (MAX_FILES_PER_TRIGGER -> "50"))
         option.maxFilesPerTrigger shouldBe Some(50)

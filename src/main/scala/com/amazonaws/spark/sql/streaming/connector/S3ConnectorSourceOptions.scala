@@ -51,7 +51,9 @@ object S3ConnectorSourceOptions {
   val SQS_QUEUE = "SQS"
 
   private val PREFIX = "spark.s3conn."
-  private val SQS_PREFIX = PREFIX + ".sqs."
+  private val SQS_PREFIX = PREFIX + "sqs."
+  // Releases up to 0.0.2 built the SQS keys with a doubled dot (spark.s3conn..sqs.*); still accepted.
+  private val LEGACY_SQS_PREFIX = PREFIX + ".sqs."
 
   val BASE_PATH: String = "basePath"
 
@@ -87,7 +89,15 @@ object S3ConnectorSourceOptions {
   val SQS_VISIBILITY_TIMEOUT_DEFAULT_VALUE: Int = 60
 
 
-  def apply(parameters: Map[String, String]): S3ConnectorSourceOptions = {
+  def apply(rawParameters: Map[String, String]): S3ConnectorSourceOptions = {
+
+    // the one-dot key wins when both spellings are given
+    val parameters = rawParameters.foldLeft(rawParameters) {
+      case (acc, (k, v)) if k.startsWith(LEGACY_SQS_PREFIX) =>
+        val key = SQS_PREFIX + k.stripPrefix(LEGACY_SQS_PREFIX)
+        if (acc.contains(key)) acc else acc + (key -> v)
+      case (acc, _) => acc
+    }
 
     val maxFilesPerTrigger: Option[Int] = parameters.get(MAX_FILES_PER_TRIGGER) match {
       case Some(str) => Try(str.toInt).toOption.filter(_ > 0).orElse(None)
