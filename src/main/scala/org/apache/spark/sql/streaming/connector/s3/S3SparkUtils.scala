@@ -62,14 +62,21 @@ object S3SparkUtils {
   private lazy val datasetCompanion: (AnyRef, java.lang.reflect.Method) = {
     val name = Seq("org.apache.spark.sql.classic.Dataset$", "org.apache.spark.sql.Dataset$").find { n =>
       Try(Class.forName(n)).isSuccess
-    }.get
+    }.getOrElse(throw new IllegalStateException("Spark Dataset companion object not found"))
     val cls = Class.forName(name)
-    (cls.getField("MODULE$").get(null), cls.getMethods.find(m => m.getName == "ofRows" && m.getParameterCount == 2).get)
+    val ofRows = cls.getMethods.find { m =>
+      m.getName == "ofRows" && m.getParameterCount == 2 && m.getParameterTypes()(1) == classOf[LogicalPlan]
+    }.getOrElse(throw new IllegalStateException(s"ofRows(SparkSession, LogicalPlan) not found in $name"))
+    (cls.getField("MODULE$").get(null), ofRows)
   }
 
   def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
     val (module, method) = datasetCompanion
-    method.invoke(module, sparkSession, logicalPlan).asInstanceOf[DataFrame]
+    try {
+      method.invoke(module, sparkSession, logicalPlan).asInstanceOf[DataFrame]
+    } catch {
+      case e: java.lang.reflect.InvocationTargetException if e.getCause != null => throw e.getCause
+    }
   }
 
 }

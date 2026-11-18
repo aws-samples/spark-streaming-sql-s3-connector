@@ -30,7 +30,6 @@ import java.io.{File, FileInputStream}
 import java.net.URI
 import java.nio.file.{FileSystems, Files, Path}
 import scala.collection.JavaConverters._
-import scala.collection.JavaConverters.asScalaIteratorConverter
 
 
 

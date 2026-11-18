@@ -228,6 +228,8 @@
                     <include>io.netty:netty-common:*</include>
                     <include>io.netty:netty-buffer:*</include>
                     <include>io.netty:netty-codec:*</include>
+                    <include>io.netty:netty-codec-base:*</include>
+                    <include>io.netty:netty-codec-compression:*</include>
                     <include>io.netty:netty-codec-http:*</include>
                     <include>io.netty:netty-codec-http2:*</include>
                     <include>io.netty:netty-handler:*</include>
@@ -243,6 +245,8 @@
                     <excludes>
                       <exclude>META-INF/maven/**</exclude>
                       <exclude>META-INF/MANIFEST.MF</exclude>
+                      <exclude>module-info.class</exclude>
+                      <exclude>META-INF/versions/*/module-info.class</exclude>
                     </excludes>
                   </filter>
                 </filters>
@@ -314,6 +318,10 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

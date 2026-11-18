@@ -21,6 +21,7 @@ import com.amazonaws.spark.sql.streaming.connector.S3ConnectorSourceOptions.{MAX
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper
 
 import org.apache.spark.network.util.JavaUtils
+import org.apache.spark.sql.catalyst.util.CaseInsensitiveMap
 
 class S3ConnectorSourceOptionsSuite extends S3ConnectorTestBase  {
     test("option uses default values") {
@@ -69,6 +70,14 @@ class S3ConnectorSourceOptionsSuite extends S3ConnectorTestBase  {
         val option = S3ConnectorSourceOptions(defaultOptionMap + ("spark.s3conn..sqs.maxRetries" -> "4")
           + ("spark.s3conn.sqs.maxRetries" -> "5"))
         option.sqsMaxRetries shouldBe 5
+    }
+
+    test("sqs keys are matched when Spark passes the options as a CaseInsensitiveMap") {
+        val options = CaseInsensitiveMap(defaultOptionMap + ("spark.s3conn..SQS.maxRetries" -> "4")
+          + ("Spark.S3Conn.sqs.MaxConcurrency" -> "9") + ("spark.s3conn..sqs.maxConcurrency" -> "3"))
+        val option = S3ConnectorSourceOptions(options)
+        option.sqsMaxRetries shouldBe 4
+        option.sqsMaxConcurrency shouldBe 9
     }
 
     test("maxFilesPerTrigger given a value") {
