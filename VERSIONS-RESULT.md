@@ -1,5 +1,7 @@
 # Result: connector 0.0.3 on every Spark version used by EMR and Glue (3.2.1 up to 4.1.3)
 
+> Update: jars are now named by Spark version (`spark-streaming-sql-s3-connector-0.0.3-spark<version>.jar`, tests jar `...-0.0.3-tests-spark<version>.jar`). All 17 versions were re-run on commit `ca5fcf4` and the 17 tags were moved there. See `CLASSIFIER-RESULT.md`. The per-version table below is the earlier run on `82c71c3`.
+
 Repo: `/workplace/gromav/spark-s3-connector-update/versions` (local clone, nothing pushed, no PR, no release, upstream untouched, no AWS changes).
 All 17 versions build and pass all unit tests. No version failed.
 
@@ -33,7 +35,7 @@ Command (JDK 11 for 3.x, 17 for 4.x): `mvn -Pdefault-test,<profile> -Dspark.vers
 Summary of all runs: `/workplace/gromav/spark-s3-connector-update/logs/summary.txt`.
 Maven exits non-zero for every version because the three `it.*` suites (`S3ConnectorSourceSqsRocksDBItSuite`, `S3ConnectorSourceCrossAccountSqsRocksDBItSuite`, `AsyncSqsClientItSuite`) abort in the constructor with `Env variable TEST_REGION must be defined`. That is the expected abort and was not run. `Tests: failed 0` and 62 succeeded in each log.
 
-Tags (name -> commit): all 17 tags are annotated and point at `82c71c3`. List them with `git -C /workplace/gromav/spark-s3-connector-update/versions tag -l 'v0.0.3-spark*' --format='%(refname:short) %(*objectname:short)'`.
+Tags (name -> commit): all 17 tags are annotated and now point at `ca5fcf4` (moved from `82c71c3`, see `CLASSIFIER-RESULT.md`). List them with `git -C /workplace/gromav/spark-s3-connector-update/versions tag -l 'v0.0.3-spark*' --format='%(refname:short) %(*objectname:short)'`.
 
 ## Shaded jar check (beyond the unit tests)
 
