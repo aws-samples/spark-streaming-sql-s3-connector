@@ -45,6 +45,10 @@ case class S3ConnectorSourceOptions (
   sqsLongPollWaitTimeSeconds: Int,
   sqsVisibilityTimeoutSeconds: Int,
   sqsKeepMessageForConsumerError: Boolean,
+  sqsMaxPoolSize: Int = S3ConnectorSourceOptions.SQS_MAX_POOL_SIZE_DEFAULT_VALUE,
+  sqsConnectionAcquisitionTimeoutSeconds: Int =
+    S3ConnectorSourceOptions.SQS_CONNECTION_ACQUISITION_TIMEOUT_SECONDS_DEFAULT_VALUE,
+  sqsMaxPendingAcquires: Option[Int] = None,
 )
 
 object S3ConnectorSourceOptions {
@@ -74,6 +78,9 @@ object S3ConnectorSourceOptions {
   val SQS_KEEP_MESSAGE_FOR_CONSUMER_ERROR: String = SQS_PREFIX + "keepMessageForConsumerError"
   val SQS_MAX_RETRIES: String = SQS_PREFIX + "maxRetries"
   val SQS_MAX_CONCURRENCY: String = SQS_PREFIX + "maxConcurrency"
+  val SQS_MAX_POOL_SIZE: String = SQS_PREFIX + "maxPoolSize"
+  val SQS_CONNECTION_ACQUISITION_TIMEOUT_SECONDS: String = SQS_PREFIX + "connectionAcquisitionTimeoutSeconds"
+  val SQS_MAX_PENDING_ACQUIRES: String = SQS_PREFIX + "maxPendingAcquires"
 
   val MAX_FILES_PER_TRIGGER_DEFAULT_VALUE: Int = 100
   val MAX_FILE_AGE_DEFAULT_VALUE: String = "15d"
@@ -85,6 +92,8 @@ object S3ConnectorSourceOptions {
   val SQS_KEEP_MESSAGE_FOR_CONSUMER_ERROR_DEFAULT_VALUE: Boolean = false
   val SQS_MAX_CONCURRENCY_DEFAULT_VALUE: Int = 50
   val SQS_VISIBILITY_TIMEOUT_DEFAULT_VALUE: Int = 60
+  val SQS_MAX_POOL_SIZE_DEFAULT_VALUE: Int = 200
+  val SQS_CONNECTION_ACQUISITION_TIMEOUT_SECONDS_DEFAULT_VALUE: Int = Utils.DEFAULT_CONNECTION_ACQUIRE_TIMEOUT
 
 
   def apply(parameters: Map[String, String]): S3ConnectorSourceOptions = {
@@ -169,6 +178,15 @@ object S3ConnectorSourceOptions {
     val sqsVisibilityTimeoutSeconds: Int = withPositiveIntegerParameter(parameters, SQS_VISIBILITY_TIMEOUT_SECONDS,
       SQS_VISIBILITY_TIMEOUT_DEFAULT_VALUE)
 
+    val sqsMaxPoolSize: Int = withPositiveIntegerParameter(parameters, SQS_MAX_POOL_SIZE,
+      SQS_MAX_POOL_SIZE_DEFAULT_VALUE)
+
+    val sqsConnectionAcquisitionTimeoutSeconds: Int = withPositiveIntegerParameter(parameters,
+      SQS_CONNECTION_ACQUISITION_TIMEOUT_SECONDS, SQS_CONNECTION_ACQUISITION_TIMEOUT_SECONDS_DEFAULT_VALUE)
+
+    val sqsMaxPendingAcquires: Option[Int] = withOptionalPositiveIntegerParameter(parameters,
+      SQS_MAX_PENDING_ACQUIRES)
+
     val queueFetchWaitTimeoutSeconds: Long = withPositiveIntegerParameter(parameters, QUEUE_FETCH_WAIT_TIMEOUT_SECONDS,
       2 * sqsLongPollWaitTimeSeconds)
 
@@ -189,17 +207,24 @@ object S3ConnectorSourceOptions {
       sqsMaxRetries = sqsMaxRetries,
       sqsMaxConcurrency = sqsMaxConcurrency,
       sqsVisibilityTimeoutSeconds = sqsVisibilityTimeoutSeconds,
-      sqsKeepMessageForConsumerError = sqsKeepMessageForConsumerError
+      sqsKeepMessageForConsumerError = sqsKeepMessageForConsumerError,
+      sqsMaxPoolSize = sqsMaxPoolSize,
+      sqsConnectionAcquisitionTimeoutSeconds = sqsConnectionAcquisitionTimeoutSeconds,
+      sqsMaxPendingAcquires = sqsMaxPendingAcquires
     )
   }
 
-  private def withPositiveIntegerParameter(parameters: Map[String, String], name: String, default: Int) = {
+  private def withOptionalPositiveIntegerParameter(parameters: Map[String, String], name: String): Option[Int] = {
     parameters.get(name).map { str =>
       Try(str.toInt).toOption.filter(_ > 0).getOrElse {
         throw new IllegalArgumentException(
           s"Invalid value '$str' for option '${name}', must be a positive integer")
       }
-    }.getOrElse(default)
+    }
+  }
+
+  private def withPositiveIntegerParameter(parameters: Map[String, String], name: String, default: Int) = {
+    withOptionalPositiveIntegerParameter(parameters, name).getOrElse(default)
   }
 
   private def withBooleanParameter(parameters: Map[String, String], name: String, default: Boolean) = {

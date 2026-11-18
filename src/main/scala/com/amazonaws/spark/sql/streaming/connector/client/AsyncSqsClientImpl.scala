@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 import com.amazonaws.spark.sql.streaming.connector.{FileMetadata, S3ConnectorSourceOptions}
 import com.amazonaws.spark.sql.streaming.connector.Utils.{convertTimestampToMills, reportTimeTaken, shutdownAndAwaitTermination}
 import com.amazonaws.spark.sql.streaming.connector.client.AsyncQueueConsumerResults.AsyncQueueConsumerResult
-import com.amazonaws.spark.sql.streaming.connector.client.AsyncSqsClientImpl.{MAX_POOL_SIZE, MAX_SQS_BATCH_SIZE}
+import com.amazonaws.spark.sql.streaming.connector.client.AsyncSqsClientImpl.MAX_SQS_BATCH_SIZE
 import org.json4s.{DefaultFormats, MappingException}
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.parse
@@ -49,7 +49,7 @@ class AsyncSqsClientImpl[T] (client: SqsAsyncClient,
   override val queueUrl: String = sourceOptions.queueUrl
 
 
-  val poolSize: Int = math.min(sourceOptions.sqsMaxConcurrency, MAX_POOL_SIZE)
+  val poolSize: Int = math.min(sourceOptions.sqsMaxConcurrency, sourceOptions.sqsMaxPoolSize)
 
   override val metrics: AsyncClientMetrics = AsyncSqsClientMetricsImpl()
 
@@ -480,6 +480,5 @@ class AsyncSqsClientImpl[T] (client: SqsAsyncClient,
 }
 
 object AsyncSqsClientImpl {
-  val MAX_POOL_SIZE = 200
   val MAX_SQS_BATCH_SIZE = 10 // limit in sqs async client - up to 10 per batch
 }
