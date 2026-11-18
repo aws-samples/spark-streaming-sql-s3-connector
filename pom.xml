@@ -226,11 +226,18 @@
                     <include>software.amazon.awssdk:http-client-spi:*</include>
                     <include>software.amazon.awssdk:json-utils:*</include>
                     <include>software.amazon.awssdk:metrics-spi:*</include>
-                    <include>software.amazon.awssdk:netty-nio-client:*</include>
                     <include>software.amazon.awssdk:profiles:*</include>
                     <include>software.amazon.awssdk:protocol-core:*</include>
                     <include>software.amazon.awssdk:regions:*</include>
                     <include>software.amazon.awssdk:third-party-jackson-core:*</include>
+                    <!-- modules of newer SDK releases (Spark 4.x profiles); no-op for older ones -->
+                    <include>software.amazon.awssdk:aws-json-protocol:*</include>
+                    <include>software.amazon.awssdk:checksums:*</include>
+                    <include>software.amazon.awssdk:checksums-spi:*</include>
+                    <include>software.amazon.awssdk:identity-spi:*</include>
+                    <include>software.amazon.awssdk:retries:*</include>
+                    <include>software.amazon.awssdk:retries-spi:*</include>
+                    <include>software.amazon.awssdk:http-auth-aws-eventstream:*</include>
                     <include>io.dropwizard.metrics:metrics-core:*</include>
                     <include>org.reactivestreams:reactive-streams:*</include>
                     <include>io.netty:netty-common:*</include>
@@ -396,10 +403,26 @@
       <properties>
         <spark.version>4.0.2</spark.version>
         <hadoop.version>3.4.1</hadoop.version>
+        <!-- Same SDK v2 as hadoop-aws 3.4.1 (software.amazon.awssdk:bundle). Mixed SDK versions on one
+             classpath break S3A (NoSuchMethodError in SdkHttpUtils). The shaded jar relocates this SDK.
+             Change it together with hadoop.version. -->
+        <aws.java.sdk2.version>2.24.6</aws.java.sdk2.version>
         <scala.binary.version>2.13</scala.binary.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
       </properties>
+      <!-- Spark 4.0's Netty; also sets the Netty version relocated into the shaded jar -->
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-bom</artifactId>
+            <version>4.1.118.Final</version>
+            <type>pom</type>
+            <scope>import</scope>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
       <dependencies>
         <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
         <dependency>
@@ -416,6 +439,9 @@
         <spark.compat.dir>scala-spark-41</spark.compat.dir>
         <spark.version>4.1.1</spark.version>
         <hadoop.version>3.4.2</hadoop.version>
+        <!-- Same SDK v2 as hadoop-aws 3.4.2 (software.amazon.awssdk:bundle), see spark-4.0.
+             Change it together with hadoop.version. -->
+        <aws.java.sdk2.version>2.29.52</aws.java.sdk2.version>
         <scala.binary.version>2.13</scala.binary.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>

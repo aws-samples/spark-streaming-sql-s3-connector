@@ -42,7 +42,7 @@ EMR 8.x here means the separate `emr-spark-8.x` release train (the multi-engine 
 
 Java versions from the docs: Glue 4.0 = Java 8, Glue 5.0, 5.1 and 6.0 = Java 17. The EMR Java versions were not looked up. The JDK in the profile column is what the tests ran with (Spark 4 requires 17).
 
-AWS SDK per release (docs): Glue 6.0 uses SDK for Java v2 only. EMR 7.14.0 ships SDK 2.44.5 plus 1.12.797, EMR emr-spark-8.2.0 ships 2.55.8, emr-spark-8.1.0 ships 2.44.5, emr-spark-8.0.0 ships 2.41.32, EMR 6.15.0 ships 2.20.160-amzn-0 plus 1.12.569. Per-release values for the other EMR rows are in the pages below. The connector bundles its own SDK v2 (2.19.21, relocated), so it does not depend on the cluster's SDK. Spark's own `aws.java.sdk.version` is 1.11.655 (Spark 3.x and 4.0) and 1.12.681 (4.1), used only by Kinesis modules.
+AWS SDK per release (docs): Glue 6.0 uses SDK for Java v2 only. EMR 7.14.0 ships SDK 2.44.5 plus 1.12.797, EMR emr-spark-8.2.0 ships 2.55.8, emr-spark-8.1.0 ships 2.44.5, emr-spark-8.0.0 ships 2.41.32, EMR 6.15.0 ships 2.20.160-amzn-0 plus 1.12.569. Per-release values for the other EMR rows are in the pages below. The connector bundles its own SDK v2, relocated, so it does not depend on the cluster's SDK: 2.19.21 for Spark 3.x, 2.24.6 for Spark 4.0 and 2.29.52 for Spark 4.1 (the SDK that hadoop-aws 3.4.1 / 3.4.2 uses, so the test classpath has one SDK version). Spark's own `aws.java.sdk.version` is 1.11.655 (Spark 3.x and 4.0) and 1.12.681 (4.1), used only by Kinesis modules.
 
 ## Sources
 
@@ -55,4 +55,5 @@ AWS SDK per release (docs): Glue 6.0 uses SDK for Java v2 only. EMR 7.14.0 ships
 ## Notes added after review
 
 - A jar built for one Spark line does not run on another line (RocksDB API, Scala 2.12 vs 2.13). Use the tag for your Spark version.
-- Spark 4.1 profile imports Netty 4.2.7 (Spark 4.1 needs it); the shaded jar for that line contains Netty 4.2.7 relocated.
+- Spark 4.1 profile imports Netty 4.2.7 (Spark 4.1 needs it), Spark 4.0 profile imports Netty 4.1.118 (Spark 4.0's version); the shaded jar for each line contains that Netty relocated.
+- The Spark 4.x jars use SDK 2.24.6 / 2.29.52, which talk to SQS with the JSON protocol (SDK 2.21 and later). The Spark 3.x jars use the older query protocol. Real SQS and its VPC endpoints accept both; old SQS emulators or proxies that filter on `Action=` may not.
