@@ -29,7 +29,7 @@ import software.amazon.awssdk.services.s3.model.{DeleteObjectRequest, ListObject
 import java.io.{File, FileInputStream}
 import java.net.URI
 import java.nio.file.{FileSystems, Files, Path}
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 import scala.collection.JavaConverters.asScalaIteratorConverter
 
 
@@ -103,7 +103,7 @@ object ItTestUtils extends Logging {
         if (suffix.nonEmpty) file.getName.endsWith(suffix)
         else true
       }
-      .toList
+      .toList.asJava
 
     val s3Uri = URI.create(uploadS3Path)
     val bucketName = s3Uri.getHost;
@@ -168,7 +168,7 @@ object ItTestUtils extends Logging {
         var result: ListObjectsV2Response = null
         do {
           result = s3Client.listObjectsV2(req)
-          for (s3Object <- result.contents) {
+          for (s3Object <- result.contents.asScala) {
             val deleteObjectRequest = DeleteObjectRequest.builder
               .bucket(bucketName)
               .key(s3Object.key())

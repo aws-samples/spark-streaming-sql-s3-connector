@@ -360,6 +360,15 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
       </properties>
+      <dependencies>
+        <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
+        <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-bundle</artifactId>
+          <version>1.12.791</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
     <profile>
       <id>spark-4.1</id>
@@ -370,6 +379,15 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
       </properties>
+      <dependencies>
+        <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
+        <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-bundle</artifactId>
+          <version>1.12.791</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
     <profile>
       <id>default-test</id>

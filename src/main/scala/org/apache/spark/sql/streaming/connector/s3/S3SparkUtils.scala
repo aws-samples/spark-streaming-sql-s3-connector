@@ -20,8 +20,10 @@ package org.apache.spark.sql.streaming.connector.s3
 import java.io.File
 import java.util.concurrent.{ExecutorService, ScheduledExecutorService, ThreadPoolExecutor}
 
+import scala.util.Try
+
 import org.apache.spark.SparkConf
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.util.{ThreadUtils, Utils}
 
@@ -55,7 +57,19 @@ object S3SparkUtils {
     Utils.getLocalDir(conf)
   }
 
-  def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame =
-    Dataset.ofRows(sparkSession, logicalPlan)
+  // Dataset.ofRows moved to org.apache.spark.sql.classic.Dataset in Spark 4.0 and takes a classic
+  // SparkSession. One source tree builds against both, so look the companion up by name.
+  private lazy val datasetCompanion: (AnyRef, java.lang.reflect.Method) = {
+    val name = Seq("org.apache.spark.sql.classic.Dataset$", "org.apache.spark.sql.Dataset$").find { n =>
+      Try(Class.forName(n)).isSuccess
+    }.get
+    val cls = Class.forName(name)
+    (cls.getField("MODULE$").get(null), cls.getMethods.find(m => m.getName == "ofRows" && m.getParameterCount == 2).get)
+  }
+
+  def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame = {
+    val (module, method) = datasetCompanion
+    method.invoke(module, sparkSession, logicalPlan).asInstanceOf[DataFrame]
+  }
 
 }

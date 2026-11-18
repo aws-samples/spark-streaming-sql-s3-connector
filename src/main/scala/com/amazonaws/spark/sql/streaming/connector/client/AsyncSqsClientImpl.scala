@@ -109,7 +109,7 @@ class AsyncSqsClientImpl[T] (client: SqsAsyncClient,
               }
 
               // Wait for the batch to complete
-              CompletableFuture.allOf(futures: _*)
+              CompletableFuture.allOf(futures.toSeq: _*)
                 .exceptionally((e) => {
                   logError(s"exception in sqsAsyncFetchMessagesThread allOf", e)
                   null
@@ -432,7 +432,7 @@ class AsyncSqsClientImpl[T] (client: SqsAsyncClient,
           Seq[AsyncQueueConsumerResult]](future, (results, nextResult) => {
           val newResults = ArrayBuffer(results: _*)
           newResults += nextResult
-          newResults
+          newResults.toSeq
         })
       }
     }
