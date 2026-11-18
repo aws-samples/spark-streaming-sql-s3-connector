@@ -19,7 +19,7 @@ package com.amazonaws.spark.sql.streaming.connector.metadataLog
 import com.amazonaws.spark.sql.streaming.connector.TestUtils.withTestTempDir
 import com.amazonaws.spark.sql.streaming.connector.{QueueMessageDesc, S3ConnectorFileCache, S3ConnectorTestBase}
 import org.apache.hadoop.fs.FileSystem
-import org.apache.spark.sql.execution.streaming.FileStreamSource.FileEntry
+import com.amazonaws.spark.sql.streaming.connector.SparkCompat.FileEntry
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.test.SharedSparkSession
 import org.scalatest.matchers.should.Matchers.convertToAnyShouldWrapper

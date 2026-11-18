@@ -37,8 +37,7 @@ import org.apache.spark.{SparkConf, SparkEnv}
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.expressions.{GenericInternalRow, UnsafeProjection, UnsafeRow}
-import org.apache.spark.sql.execution.streaming.CheckpointFileManager
-import org.apache.spark.sql.execution.streaming.FileStreamSource.FileEntry
+import com.amazonaws.spark.sql.streaming.connector.SparkCompat.{CheckpointFileManager, FileEntry}
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.streaming.connector.s3.{RocksDB, RocksDBConf, RocksDBStateEncoder, S3SparkUtils}
 import org.apache.spark.sql.streaming.connector.s3.S3SparkUtils.newDaemonSingleThreadScheduledExecutor

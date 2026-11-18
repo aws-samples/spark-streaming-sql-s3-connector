@@ -34,6 +34,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <aws.java.sdk2.version>2.19.21</aws.java.sdk2.version>
         <metrics.version>4.1.36</metrics.version>
+        <spark.compat.dir>scala-spark-pre41</spark.compat.dir>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
@@ -296,6 +297,25 @@
     </pluginManagement>
     <plugins>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>add-spark-compat-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/main/${spark.compat.dir}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
       </plugin>
@@ -373,12 +393,26 @@
     <profile>
       <id>spark-4.1</id>
       <properties>
+        <spark.compat.dir>scala-spark-41</spark.compat.dir>
         <spark.version>4.1.1</spark.version>
         <hadoop.version>3.4.2</hadoop.version>
         <scala.binary.version>2.13</scala.binary.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
       </properties>
+      <!-- Spark 4.1 needs Netty 4.2 (NioIoHandler); the AWS SDK Netty client resolves to 4.1 otherwise.
+           This also sets the Netty version relocated into the shaded jar. -->
+      <dependencyManagement>
+        <dependencies>
+          <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-bom</artifactId>
+            <version>4.2.7.Final</version>
+            <type>pom</type>
+            <scope>import</scope>
+          </dependency>
+        </dependencies>
+      </dependencyManagement>
       <dependencies>
         <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
         <dependency>

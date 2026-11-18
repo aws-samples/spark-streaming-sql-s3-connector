@@ -19,8 +19,7 @@ package com.amazonaws.spark.sql.streaming.connector.metadataLog
 import com.amazonaws.spark.sql.streaming.connector.S3ConnectorFileCache
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.execution.streaming.FileStreamSource.FileEntry
-import org.apache.spark.sql.execution.streaming.MetadataLog
+import com.amazonaws.spark.sql.streaming.connector.SparkCompat.{FileEntry, MetadataLog}
 
 trait S3MetadataLog extends MetadataLog[Array[FileEntry]]{
   /**
