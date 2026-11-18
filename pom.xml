@@ -20,7 +20,7 @@
 
   <groupId>com.amazonaws</groupId>
   <artifactId>spark-streaming-sql-s3-connector</artifactId>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <packaging>jar</packaging>
   <name>Spark Structure Streaming S3 Connector</name>
 
@@ -309,6 +309,68 @@
   </build>
 
   <profiles>
+    <!-- One profile per Spark line. Select the exact release with -Dspark.version=X.Y.Z, e.g.
+         mvn -Pdefault-test,spark-3.5 -Dspark.version=3.5.4 test -->
+    <profile>
+      <id>spark-3.2</id>
+      <properties>
+        <spark.version>3.2.1</spark.version>
+        <hadoop.version>3.3.1</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-3.3</id>
+      <properties>
+        <spark.version>3.3.0</spark.version>
+        <hadoop.version>3.3.2</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-3.4</id>
+      <properties>
+        <spark.version>3.4.0</spark.version>
+        <hadoop.version>3.3.4</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-3.5</id>
+      <properties>
+        <spark.version>3.5.0</spark.version>
+        <hadoop.version>3.3.4</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-4.0</id>
+      <properties>
+        <spark.version>4.0.2</spark.version>
+        <hadoop.version>3.4.1</hadoop.version>
+        <scala.binary.version>2.13</scala.binary.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-4.1</id>
+      <properties>
+        <spark.version>4.1.1</spark.version>
+        <hadoop.version>3.4.2</hadoop.version>
+        <scala.binary.version>2.13</scala.binary.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+      </properties>
+    </profile>
     <profile>
       <id>default-test</id>
       <activation>
