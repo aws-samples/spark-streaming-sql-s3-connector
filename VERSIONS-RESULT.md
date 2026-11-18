@@ -43,7 +43,7 @@ Unit tests run on the unshaded classpath. For one release per line (3.2.1, 3.3.2
 
 1. SQS option prefix: `SQS_PREFIX` is now `spark.s3conn.sqs.`. Old `spark.s3conn..sqs.*` keys are still read; the one-dot key wins when both are set. 4 new tests (one-dot, legacy, precedence, CaseInsensitiveMap as Spark passes it).
 2. RocksDB `writeBatch.remove` -> `delete`: already in upstream HEAD (PR #12 merged), nothing to do.
-3. PR #14 (configurable SQS pool): not merged, left alone (not trivial; it touches the client code).
+3. PR #14 (configurable SQS pool): not merged, left alone (not reviewed here for triviality; the earlier PR #14 review is in /workplace/gromav/spark-s3-pr14-review/REVIEW.md).
 4. pom: version 0.0.3, six Spark-line profiles, build-helper source dir `src/main/${spark.compat.dir}`, `scala-maven-plugin` declared at top level, shade plugin 3.2.1 -> 3.5.3 (3.2.1 cannot read Java 17 class files), shade includes `netty-codec-base` and `netty-codec-compression`, `module-info.class` excluded.
 5. Spark 4.x / Scala 2.13: `.toSeq` on two mutable buffers; `S3SparkUtils.ofRows` finds `Dataset.ofRows` by name (`classic.Dataset$` on Spark 4, `Dataset$` before) and rethrows the real exception; test-scope `aws-java-sdk-bundle` 1.12.791 in the 4.x profiles (Spark 4's hadoop-aws no longer brings SDK v1 for the it.* sources); `JavaConversions` -> `JavaConverters` in `ItTestUtils`.
 6. Spark 4.1: `SparkCompat` shim (`src/main/scala-spark-pre41` and `src/main/scala-spark-41`) because `MetadataLog`, `CheckpointFileManager`, `FileStreamSource`, `FileStreamSourceOffset` moved packages. The spark-4.1 profile imports `netty-bom` 4.2.7.Final, because Spark 4.1 needs Netty 4.2 (`NioIoHandler`).
