@@ -107,3 +107,5 @@ Note: any script that picks `target/spark-streaming-sql-s3-connector-0.0.3.jar` 
 - No install/deploy to a Maven repo was tested; POM behaviour is from the plugin docs and the built files.
 - it.* suites not run (need AWS). The 4.1 Netty 4.2 + SDK 2.19.21 pair is only smoke-tested locally.
 - `target/` in this repo was built by another process at 21:25 (Scala 2.13) before my run; `target/` now holds the 4.1.3 build.
+
+Pushed head: `3fb9495` (code `ca5fcf4` + this result file), verified with `git ls-remote fork`. A follow-up commit only adds this line.
