@@ -77,4 +77,4 @@ The fixes were re-tested: all 17 versions re-run on 82c71c3 after the fixes (62 
 
 ## Push
 
-Branch `update/spark-versions` pushed to remote `fork` (https://github.com/vgkowski/spark-streaming-sql-s3-connector), head `2d11505` (this file was committed on top of `6c691ed`). It carries all code from the tested commit `82c71c3` plus docs-only commits. No tags pushed (tags stay local), no PR, no force, nothing sent to aws-samples or to the fork's main.
+Branch `update/spark-versions` pushed to remote `fork` (https://github.com/vgkowski/spark-streaming-sql-s3-connector), head `91703b2` (docs-only commits on top of the tested `82c71c3`). It carries all code from the tested commit `82c71c3` plus docs-only commits. No tags pushed (tags stay local), no PR, no force, nothing sent to aws-samples or to the fork's main.
