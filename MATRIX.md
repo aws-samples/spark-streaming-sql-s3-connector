@@ -49,3 +49,8 @@ AWS SDK per release (docs): Glue 6.0 uses SDK for Java v2 only. EMR 7.14.0 ships
 - EMR 7.x: https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-release-app-versions-7.x.html (Spark 3.5.0-amzn-0 for 7.0.0 up to 3.5.8-amzn-0 for 7.14.0; Scala 2.12.18)
 - EMR Spark 8.x: https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-release-app-versions-spark_8.x.html (8.0.0 = Spark 4.0.2-amzn-0, Scala 2.13.16; 8.1.0 = 4.1.1-amzn-0; 8.2.0 = 4.1.3-amzn-0, Scala 2.13.17) and https://docs.aws.amazon.com/emr/latest/ReleaseGuide/emr-spark800-release.html (JDK 17 default, Scala 2.13, SDK v1 removed)
 - Spark POMs (Scala, Hadoop, rocksdbjni, Spark's own SDK): Maven Central `org/apache/spark/spark-parent_<scala>/<version>/` and `spark-sql_2.12/3.2.1` for rocksdbjni 6.20.3.
+
+## Notes added after review
+
+- A jar built for one Spark line does not run on another line (RocksDB API, Scala 2.12 vs 2.13). Use the tag for your Spark version.
+- Spark 4.1 profile imports Netty 4.2.7 (Spark 4.1 needs it); the shaded jar for that line contains Netty 4.2.7 relocated.
