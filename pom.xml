@@ -118,6 +118,13 @@
           <groupId>com.amazonaws</groupId>
           <artifactId>aws-java-sdk-sqs</artifactId>
         </exclusion>
+        <!-- hadoop 3.4 (Spark 4): the SDK v2 fat jar holds its own copies of the SDK modules
+             (built against a relocated slf4j); next to the connector's SDK modules it breaks S3A
+             with NoSuchMethodError. The Spark 4 profiles add the individual modules instead. -->
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>bundle</artifactId>
+        </exclusion>
       </exclusions>
       <scope>test</scope>
     </dependency>
@@ -431,6 +438,13 @@
           <version>1.12.791</version>
           <scope>test</scope>
         </dependency>
+        <!-- S3A in hadoop 3.4 needs this module of the SDK bundle excluded above (s3 is a test dependency already) -->
+        <dependency>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>s3-transfer-manager</artifactId>
+          <version>${aws.java.sdk2.version}</version>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
     </profile>
     <profile>
@@ -465,6 +479,13 @@
           <groupId>com.amazonaws</groupId>
           <artifactId>aws-java-sdk-bundle</artifactId>
           <version>1.12.791</version>
+          <scope>test</scope>
+        </dependency>
+        <!-- S3A in hadoop 3.4 needs this module of the SDK bundle excluded above (s3 is a test dependency already) -->
+        <dependency>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>s3-transfer-manager</artifactId>
+          <version>${aws.java.sdk2.version}</version>
           <scope>test</scope>
         </dependency>
       </dependencies>
