@@ -74,3 +74,7 @@ The fixes were re-tested: all 17 versions re-run on 82c71c3 after the fixes (62 
 - Checkpoints written by one Spark line are not guaranteed readable by another: `FileEntry` is Java-serialized into RocksDB and its class moved in Spark 4.1. Not tested.
 - Logs live outside git (`/workplace/gromav/spark-s3-connector-update/logs`), as do helper scripts `run-version.sh`, `run-all.sh`, `tag.sh`, `smoke.sh`.
 - Baseline test count before my 4 tests was not measured.
+
+## Push
+
+Branch `update/spark-versions` pushed to remote `fork` (https://github.com/vgkowski/spark-streaming-sql-s3-connector), head `6c691ed66d076c935f7eac0b883c9dffa872e991`. It carries all code from the tested commit `82c71c3` plus docs-only commits. No tags pushed (tags stay local), no PR, no force, nothing sent to aws-samples or to the fork's main.
