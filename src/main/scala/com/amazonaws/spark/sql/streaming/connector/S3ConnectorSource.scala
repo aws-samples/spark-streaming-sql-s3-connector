@@ -16,7 +16,6 @@
  */
 package com.amazonaws.spark.sql.streaming.connector
 
-import java.net.URI
 
 import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
@@ -170,7 +169,7 @@ class S3ConnectorSource[T](sparkSession: SparkSession,
     val newDataSource =
       DataSource(
         sparkSession,
-        paths = files.map(f => new Path(new URI(f.path)).toString),
+        paths = files.map(f => S3ConnectorSource.toDataSourcePath(f.path)),
         userSpecifiedSchema = Some(schema),
         partitionColumns = partitionColumns,
         className = sourceOptions.fileFormat,
@@ -288,6 +287,12 @@ class S3ConnectorSource[T](sparkSession: SparkSession,
 
 object S3ConnectorSource {
   val REPROCESS_LOCK_FILE = "/reprocess.lock"
+
+  // The path is the URL-decoded S3 key, so it can hold characters that are not legal in a URI
+  // (space, '%', ...). Path(String) quotes them; new URI(path) threw URISyntaxException.
+  // shortcut: DataSource still glob-expands keys with * ? [ ] { } \ (as before); escape them here
+  // if such keys must be read literally.
+  private[connector] def toDataSourcePath(path: String): String = new Path(path).toString
 }
 
 
