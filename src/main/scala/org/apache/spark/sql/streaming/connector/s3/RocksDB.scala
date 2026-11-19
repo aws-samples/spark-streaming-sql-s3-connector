@@ -454,10 +454,30 @@ class RocksDB(
     if (log.isWarnEnabled) dbLogLevel = InfoLogLevel.WARN_LEVEL
     if (log.isInfoEnabled) dbLogLevel = InfoLogLevel.INFO_LEVEL
     if (log.isDebugEnabled) dbLogLevel = InfoLogLevel.DEBUG_LEVEL
-    dbOptions.setLogger(dbLogger)
+    setDbLogger(dbLogger)
     dbOptions.setInfoLogLevel(dbLogLevel)
     logInfo(s"Set RocksDB native logging level to $dbLogLevel")
     dbLogger
+  }
+
+  /**
+   * Options.setLogger takes a Logger in rocksdbjni < 9 and a LoggerInterface in 9.x. A cluster can
+   * put another rocksdbjni first on the classpath than the one this jar was built against (seen on
+   * EMR emr-spark-8.0.0), so pick the overload at runtime instead of binding it at compile time.
+   */
+  private def setDbLogger(dbLogger: Logger): Unit = {
+    def source(c: Class[_]) = Option(c.getProtectionDomain.getCodeSource).map(_.getLocation)
+    val setter = dbOptions.getClass.getMethods.find { m =>
+      m.getName == "setLogger" && !m.isBridge && m.getParameterCount == 1 &&
+        m.getParameterTypes()(0).isInstance(dbLogger)
+    }.getOrElse {
+      throw new IllegalStateException(s"org.rocksdb.Options from ${source(classOf[Options])} " +
+        s"has no setLogger method that takes org.rocksdb.Logger from ${source(classOf[Logger])}")
+    }
+    logDebug(s"RocksDB Options class loaded from ${source(classOf[Options])}")
+    try setter.invoke(dbOptions, dbLogger) catch {
+      case e: java.lang.reflect.InvocationTargetException if e.getCause != null => throw e.getCause
+    }
   }
 
   /** Create a temp directory inside the local root directory */
