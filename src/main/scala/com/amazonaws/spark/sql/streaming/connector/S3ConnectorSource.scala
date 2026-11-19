@@ -175,8 +175,8 @@ class S3ConnectorSource[T](sparkSession: SparkSession,
         className = sourceOptions.fileFormat,
         options = options)
 
-    S3SparkUtils.ofRows(sparkSession, LogicalRelation(newDataSource.resolveRelation(
-      checkFilesExist = false), isStreaming = true))
+    S3SparkUtils.ofRows(sparkSession, LogicalRelation(
+      S3SparkUtils.resolveRelationNoFileCheck(newDataSource), isStreaming = true))
   }
 
   /*
