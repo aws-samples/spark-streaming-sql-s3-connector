@@ -20,7 +20,7 @@
 
   <groupId>com.amazonaws</groupId>
   <artifactId>spark-streaming-sql-s3-connector</artifactId>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <packaging>jar</packaging>
   <name>Spark Structure Streaming S3 Connector</name>
 
@@ -33,13 +33,24 @@
         <scalatest-maven-plugin.version>2.0.2</scalatest-maven-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <aws.java.sdk2.version>2.19.21</aws.java.sdk2.version>
+        <!-- Netty bundled (relocated) in the shaded jar. Pinned above the SDK's own Netty to pick up
+             security fixes; the spark-4.1 profile needs 4.2.x. -->
+        <netty.version>4.1.141.Final</netty.version>
         <metrics.version>4.1.36</metrics.version>
+        <spark.compat.dir>scala-spark-pre41</spark.compat.dir>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>software.amazon.awssdk</groupId>
         <artifactId>bom</artifactId>
@@ -117,6 +128,13 @@
           <groupId>com.amazonaws</groupId>
           <artifactId>aws-java-sdk-sqs</artifactId>
         </exclusion>
+        <!-- hadoop 3.4 (Spark 4): the SDK v2 fat jar holds its own copies of the SDK modules
+             (built against a relocated slf4j); next to the connector's SDK modules it breaks S3A
+             with NoSuchMethodError. The Spark 4 profiles add the individual modules instead. -->
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>bundle</artifactId>
+        </exclusion>
       </exclusions>
       <scope>test</scope>
     </dependency>
@@ -188,7 +206,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.2.1</version>
+          <version>3.5.3</version>
           <executions>
             <execution>
               <phase>package</phase>
@@ -196,6 +214,14 @@
                 <goal>shade</goal>
               </goals>
               <configuration>
+                <!-- The shaded jar (the one to pass to spark-submit with the jars option) is attached with classifier
+                     spark<spark.version>, e.g. spark-streaming-sql-s3-connector-0.0.3-spark3.5.4.jar.
+                     The main jar without classifier is the thin, unshaded jar. -->
+                <shadedArtifactAttached>true</shadedArtifactAttached>
+                <shadedClassifierName>spark${spark.version}</shadedClassifierName>
+                <!-- Keep the real POM: one POM serves every classifier of this GAV, and a reduced POM
+                     would strip the SDK dependencies the thin main jar needs. -->
+                <createDependencyReducedPom>false</createDependencyReducedPom>
                 <artifactSet>
                   <includes>
                     <include>software.amazon.awssdk:sqs:*</include>
@@ -217,16 +243,25 @@
                     <include>software.amazon.awssdk:http-client-spi:*</include>
                     <include>software.amazon.awssdk:json-utils:*</include>
                     <include>software.amazon.awssdk:metrics-spi:*</include>
-                    <include>software.amazon.awssdk:netty-nio-client:*</include>
                     <include>software.amazon.awssdk:profiles:*</include>
                     <include>software.amazon.awssdk:protocol-core:*</include>
                     <include>software.amazon.awssdk:regions:*</include>
                     <include>software.amazon.awssdk:third-party-jackson-core:*</include>
+                    <!-- modules of newer SDK releases (Spark 4.x profiles); no-op for older ones -->
+                    <include>software.amazon.awssdk:aws-json-protocol:*</include>
+                    <include>software.amazon.awssdk:checksums:*</include>
+                    <include>software.amazon.awssdk:checksums-spi:*</include>
+                    <include>software.amazon.awssdk:identity-spi:*</include>
+                    <include>software.amazon.awssdk:retries:*</include>
+                    <include>software.amazon.awssdk:retries-spi:*</include>
+                    <include>software.amazon.awssdk:http-auth-aws-eventstream:*</include>
                     <include>io.dropwizard.metrics:metrics-core:*</include>
                     <include>org.reactivestreams:reactive-streams:*</include>
                     <include>io.netty:netty-common:*</include>
                     <include>io.netty:netty-buffer:*</include>
                     <include>io.netty:netty-codec:*</include>
+                    <include>io.netty:netty-codec-base:*</include>
+                    <include>io.netty:netty-codec-compression:*</include>
                     <include>io.netty:netty-codec-http:*</include>
                     <include>io.netty:netty-codec-http2:*</include>
                     <include>io.netty:netty-handler:*</include>
@@ -239,9 +274,11 @@
                 <filters>
                   <filter>
                     <artifact>*:*</artifact>
+                    <!-- META-INF/maven/** and the jar manifest are kept so SCA tools can see the bundled
+                         (relocated) libraries; shade keeps only this project's MANIFEST.MF -->
                     <excludes>
-                      <exclude>META-INF/maven/**</exclude>
-                      <exclude>META-INF/MANIFEST.MF</exclude>
+                      <exclude>module-info.class</exclude>
+                      <exclude>META-INF/versions/*/module-info.class</exclude>
                     </excludes>
                   </filter>
                 </filters>
@@ -278,12 +315,17 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.1.0</version>
+          <!-- 3.4.x: the manifest has no Built-By (the builder's user name) -->
+          <version>3.4.2</version>
           <executions>
             <execution>
               <goals>
                 <goal>test-jar</goal>
               </goals>
+              <configuration>
+                <!-- tests jar is per Spark line too (Scala 2.12 vs 2.13), so name it per Spark version -->
+                <classifier>tests-spark${spark.version}</classifier>
+              </configuration>
             </execution>
           </executions>
         </plugin>
@@ -295,6 +337,29 @@
       </plugins>        
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.6.0</version>
+        <executions>
+          <execution>
+            <id>add-spark-compat-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/main/${spark.compat.dir}</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
@@ -309,6 +374,110 @@
   </build>
 
   <profiles>
+    <!-- One profile per Spark line. Select the exact release with -Dspark.version=X.Y.Z, e.g.
+         mvn -Pdefault-test,spark-3.5 -Dspark.version=3.5.4 test -->
+    <profile>
+      <id>spark-3.2</id>
+      <properties>
+        <spark.version>3.2.1</spark.version>
+        <hadoop.version>3.3.1</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-3.3</id>
+      <properties>
+        <spark.version>3.3.0</spark.version>
+        <hadoop.version>3.3.2</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-3.4</id>
+      <properties>
+        <spark.version>3.4.0</spark.version>
+        <hadoop.version>3.3.4</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-3.5</id>
+      <properties>
+        <spark.version>3.5.0</spark.version>
+        <hadoop.version>3.3.4</hadoop.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+      </properties>
+    </profile>
+    <profile>
+      <id>spark-4.0</id>
+      <properties>
+        <spark.version>4.0.2</spark.version>
+        <hadoop.version>3.4.1</hadoop.version>
+        <!-- Same SDK v2 as hadoop-aws 3.4.1 (software.amazon.awssdk:bundle). Mixed SDK versions on one
+             classpath break S3A (NoSuchMethodError in SdkHttpUtils). The shaded jar relocates this SDK.
+             Change it together with hadoop.version. -->
+        <aws.java.sdk2.version>2.24.6</aws.java.sdk2.version>
+        <scala.binary.version>2.13</scala.binary.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+      </properties>
+      <dependencies>
+        <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
+        <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-bundle</artifactId>
+          <version>1.12.791</version>
+          <scope>test</scope>
+        </dependency>
+        <!-- S3A in hadoop 3.4 needs this module of the SDK bundle excluded above (s3 is a test dependency already) -->
+        <dependency>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>s3-transfer-manager</artifactId>
+          <version>${aws.java.sdk2.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
+      <id>spark-4.1</id>
+      <properties>
+        <spark.compat.dir>scala-spark-41</spark.compat.dir>
+        <spark.version>4.1.1</spark.version>
+        <hadoop.version>3.4.2</hadoop.version>
+        <!-- Same SDK v2 as hadoop-aws 3.4.2 (software.amazon.awssdk:bundle), see spark-4.0.
+             Change it together with hadoop.version. -->
+        <aws.java.sdk2.version>2.29.52</aws.java.sdk2.version>
+        <!-- Spark 4.1 needs Netty 4.2 (NioIoHandler); also the Netty relocated into the shaded jar -->
+        <netty.version>4.2.21.Final</netty.version>
+        <scala.binary.version>2.13</scala.binary.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+      </properties>
+      <dependencies>
+        <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
+        <dependency>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-bundle</artifactId>
+          <version>1.12.791</version>
+          <scope>test</scope>
+        </dependency>
+        <!-- S3A in hadoop 3.4 needs this module of the SDK bundle excluded above (s3 is a test dependency already) -->
+        <dependency>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>s3-transfer-manager</artifactId>
+          <version>${aws.java.sdk2.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>default-test</id>
       <activation>

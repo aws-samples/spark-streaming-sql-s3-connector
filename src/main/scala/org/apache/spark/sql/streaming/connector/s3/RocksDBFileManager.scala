@@ -38,7 +38,7 @@ import org.json4s.NoTypeHints
 import org.json4s.jackson.Serialization
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.execution.streaming.CheckpointFileManager
+import com.amazonaws.spark.sql.streaming.connector.SparkCompat.CheckpointFileManager
 import org.apache.spark.util.Utils
 
 // This file is copied from Spark 3.2.1 with minor adaption to S3 connector

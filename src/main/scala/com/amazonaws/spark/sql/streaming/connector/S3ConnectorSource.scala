@@ -16,7 +16,6 @@
  */
 package com.amazonaws.spark.sql.streaming.connector
 
-import java.net.URI
 
 import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
@@ -32,7 +31,7 @@ import org.apache.spark.internal.Logging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.execution.datasources.{DataSource, LogicalRelation}
 import org.apache.spark.sql.execution.streaming._
-import org.apache.spark.sql.execution.streaming.FileStreamSource._
+import com.amazonaws.spark.sql.streaming.connector.SparkCompat.{FileEntry, FileStreamSourceOffset}
 import org.apache.spark.sql.streaming.connector.s3.S3SparkUtils
 import org.apache.spark.sql.types.StructType
 
@@ -170,20 +169,20 @@ class S3ConnectorSource[T](sparkSession: SparkSession,
     val newDataSource =
       DataSource(
         sparkSession,
-        paths = files.map(f => new Path(new URI(f.path)).toString),
+        paths = files.map(f => S3ConnectorSource.toDataSourcePath(f.path)),
         userSpecifiedSchema = Some(schema),
         partitionColumns = partitionColumns,
         className = sourceOptions.fileFormat,
         options = options)
 
-    S3SparkUtils.ofRows(sparkSession, LogicalRelation(newDataSource.resolveRelation(
-      checkFilesExist = false), isStreaming = true))
+    S3SparkUtils.ofRows(sparkSession, LogicalRelation(
+      S3SparkUtils.resolveRelationNoFileCheck(newDataSource), isStreaming = true))
   }
 
   /*
   * both startId and endId are inclusive
    */
-  private def getMetadataLogByRange(startId: Timestamp, endId: Timestamp) = {
+  private def getMetadataLogByRange(startId: Long, endId: Long) = {
     val globber = sourceOptions.pathGlobFilter.map(new GlobPattern(_))
     metadataLog.get(Some(startId), Some(endId))
       .flatMap(_._2)
@@ -288,6 +287,15 @@ class S3ConnectorSource[T](sparkSession: SparkSession,
 
 object S3ConnectorSource {
   val REPROCESS_LOCK_FILE = "/reprocess.lock"
+
+  // DataSource glob-expands a path with any of these characters; '\' is the glob escape.
+  private val GlobChars = "\\*?[]{}"
+
+  // The path is the URL-decoded S3 key, so it can hold characters that are not legal in a URI
+  // (space, '%', ...). Path(String) quotes them; new URI(path) threw URISyntaxException.
+  // Glob characters are escaped so a key such as "a[1].csv" or "a*b.csv" is read as that one object.
+  private[connector] def toDataSourcePath(path: String): String =
+    new Path(path.flatMap(c => if (GlobChars.indexOf(c) >= 0) "\\" + c else c.toString)).toString
 }
 
 

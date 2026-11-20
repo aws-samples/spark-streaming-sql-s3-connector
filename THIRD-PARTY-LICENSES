@@ -209,8 +209,9 @@
 
 ------
 
-** Netty4; version 4.1.x -- https://netty.io/
-** AWSSDK.AWS Core; version 2.19 -- https://github.com/aws/aws-sdk-java-v2
+** Netty4; version 4.1.141.Final (Spark 3.x and 4.0 builds), 4.2.21.Final (Spark 4.1 builds) -- https://netty.io/
+** JCTools (shaded inside Netty netty-common) -- https://github.com/JCTools/JCTools
+** AWSSDK.AWS Core; version 2.19.21 (Spark 3.x builds), 2.24.6 (Spark 4.0 builds), 2.29.52 (Spark 4.1 builds) -- https://github.com/aws/aws-sdk-java-v2
  
 Apache License
 Version 2.0, January 2004
@@ -1030,7 +1031,18 @@ the network between
 
 ------
 
-** Maven-org-reactivestreams; version 1.0.3 -- https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams/1.0.3
+** Maven-org-reactivestreams; version 1.0.4 (Spark 4.x builds) -- https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams/1.0.4
+MIT No Attribution
+
+Copyright 2014 Reactive Streams
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+------
+
+** Maven-org-reactivestreams; version 1.0.3 (Spark 3.x builds) -- https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams/1.0.3
 Copyright Statement for Contributions to the Reactive Streams Project
 =====================================================================
 

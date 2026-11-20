@@ -1,5 +1,7 @@
 # Apache Spark Structured Streaming S3 Connector
 
+This is sample code, for non-production usage. You should work with your security and legal teams to meet your organizational security, regulatory and compliance requirements before deployment.
+
 An Apache Spark Structured Streaming S3 connector for reading S3 files using Amazon S3 event notifications to AWS SQS.
 
 ## Archicture Overview
@@ -24,11 +26,32 @@ Clone `spark-streaming-sql-s3-connector` from the source repository on GitHub.
 git clone https://github.com/aws-samples/spark-streaming-sql-s3-connector.git
 mvn clean install -DskipTests
 ```
-This will create *target/spark-streaming-sql-s3-connector-<versiion>.jar* file which contains the connector code and its dependencies. The jar file will also be installed to local maven repository.
+Without a profile this builds for Spark 3.2.1. To build for a given Spark release, pick the profile of its Spark line and the exact version, e.g. `mvn -Pdefault-test,spark-3.5 -Dspark.version=3.5.4 clean install -DskipTests` (JDK 11 for Spark 3.x, JDK 17 for Spark 4.x). See `MATRIX.md` for the profiles and the EMR and Glue releases.
 
-The jar file can also be downloaded at https://awslabs-code-us-east-1.s3.amazonaws.com/spark-streaming-sql-s3-connector/spark-streaming-sql-s3-connector-0.0.1.jar. Change the jar file name based on version
+This will create *target/spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar* (for example `spark-streaming-sql-s3-connector-0.0.3-spark3.5.4.jar`), the shaded jar which contains the connector code and its dependencies (relocated). Use this jar with `--jars`. The jar name carries the Spark version it was built for (Maven classifier `spark<spark-version>`). The test classes are in *spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar*. *target/spark-streaming-sql-s3-connector-<version>.jar* without the Spark suffix is the thin jar that does not bundle its dependencies; do not use it with `--jars`. The jars will also be installed to local maven repository.
+
+The jar file of release 0.0.1 can also be downloaded at https://awslabs-code-us-east-1.s3.amazonaws.com/spark-streaming-sql-s3-connector/spark-streaming-sql-s3-connector-0.0.1.jar (older releases use the name without the Spark suffix).
 
 Current version is compatible with Spark 3.2 and above.
+
+### Known limitation: EMR 8.0
+
+The connector works on EMR 8.0 (`emr-spark-8.0.0`, Spark 4.0.2). Reading, the connector's own RocksDB store and stateful queries with the default HDFS state store all pass our end-to-end tests (real S3 and SQS on EMR Serverless).
+
+A streaming query that sets `spark.sql.streaming.stateStore.providerClass` to Spark's `org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider` fails on EMR 8.0 with `NoSuchMethodError: org.rocksdb.Logger.<init>(org.rocksdb.InfoLogLevel)`. The cause is the Hudi bundle `/usr/lib/hudi/hudi-spark-bundle.jar` (`hudi-spark4.0-bundle_2.13-1.1.0-amzn-0.jar`). It contains `org.rocksdb` classes from rocksdbjni 7.5.3, which have no `Logger(InfoLogLevel)` constructor. EMR 8.0 puts it in `spark.driver.extraClassPath` and `spark.executor.extraClassPath`, so it is loaded before Spark's `/usr/lib/spark/jars/rocksdbjni-9.8.4.jar`. On EMR 8.2 the Hudi bundle carries rocksdbjni 9.8.4. The connector jar contains no RocksDB classes or native libraries.
+
+Workarounds:
+
+- keep the default HDFS state store, or
+- use EMR 8.2 (`emr-spark-8.2.0`, Spark 4.1.3), where the same test passes, or
+- put Spark's rocksdbjni first on both class paths. **Tested in a local run of the EMR 8.0 base image only, not on EMR Serverless; it may affect Hudi** (Hudi 1.1.0 then also gets the RocksDB 9.8.4 classes). Setting a key replaces the EMR default, so pass the jar followed by the full EMR 8.0 default value. Each value is one argument (or one entry in `sparkSubmitParameters`):
+
+  ```text
+  --conf spark.driver.extraClassPath=/usr/lib/spark/jars/rocksdbjni-9.8.4.jar:/usr/lib/spark/connector/lib/spark-connect.jar:/usr/lib/spark/connector/lib/spark-connect-common.jar:/usr/lib/livy/rsc-jars/*:/usr/lib/livy/repl_2.13-jars/*:/usr/lib/hadoop-lzo/lib/*:/usr/lib/hadoop/hadoop-aws.jar:/usr/share/aws/aws-java-sdk-v2/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/*:/usr/share/aws/emr/goodies/lib/emr-spark-goodies.jar:/usr/share/aws/emr/goodies/lib/emr-sparkconnect-goodies.jar:/usr/share/aws/emr/goodies/lib/emr-serverless-spark-goodies.jar:/usr/share/aws/emr/security/conf:/usr/share/aws/emr/security/lib/*:/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/usr/share/java/Hive-JSON-Serde/hive-openx-serde.jar:/usr/share/aws/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:/usr/share/aws/emr/s3select/lib/emr-s3-select-spark-connector.jar:/docker/usr/lib/hadoop-lzo/lib/*:/docker/usr/lib/hadoop/hadoop-aws.jar:/docker/usr/share/aws/emr/emrfs/conf:/docker/usr/share/aws/emr/emrfs/lib/*:/docker/usr/share/aws/emr/emrfs/auxlib/*:/docker/usr/share/aws/emr/goodies/lib/emr-spark-goodies.jar:/docker/usr/share/aws/emr/security/conf:/docker/usr/share/aws/emr/security/lib/*:/docker/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/docker/usr/share/java/Hive-JSON-Serde/hive-openx-serde.jar:/docker/usr/share/aws/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:/docker/usr/share/aws/emr/s3select/lib/emr-s3-select-spark-connector.jar:/usr/share/aws/redshift/jdbc/RedshiftJDBC.jar:/usr/share/aws/redshift/spark-redshift/lib/*:/usr/share/aws/iceberg/lib/iceberg-emr-common.jar:/usr/share/aws/iceberg/lib/iceberg-spark4-runtime.jar:/usr/share/aws/delta/lib/delta-spark.jar:/usr/share/aws/delta/lib/delta-storage.jar:/usr/lib/hudi/hudi-spark-bundle.jar:/usr/lib/hudi/cli/lib/*:/usr/lib/hudi/hudi-aws-bundle.jar:/usr/lib/hudi/hudi-utilities-bundle.jar:/usr/share/aws/s3-tables-catalog/lib/*
+  --conf spark.executor.extraClassPath=/usr/lib/spark/jars/rocksdbjni-9.8.4.jar:/usr/lib/spark/connector/lib/spark-connect.jar:/usr/lib/spark/connector/lib/spark-connect-common.jar:/usr/lib/hadoop-lzo/lib/*:/usr/lib/hadoop/hadoop-aws.jar:/usr/share/aws/aws-java-sdk-v2/*:/usr/share/aws/emr/emrfs/conf:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/emrfs/auxlib/*:/usr/share/aws/emr/goodies/lib/emr-spark-goodies.jar:/usr/share/aws/emr/goodies/lib/emr-serverless-spark-goodies.jar:/usr/share/aws/emr/goodies/lib/emr-sparkconnect-goodies.jar:/usr/share/aws/emr/security/conf:/usr/share/aws/emr/security/lib/*:/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/usr/share/java/Hive-JSON-Serde/hive-openx-serde.jar:/usr/share/aws/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:/usr/share/aws/emr/s3select/lib/emr-s3-select-spark-connector.jar:/docker/usr/lib/hadoop-lzo/lib/*:/docker/usr/lib/hadoop/hadoop-aws.jar:/docker/usr/share/aws/emr/emrfs/conf:/docker/usr/share/aws/emr/emrfs/lib/*:/docker/usr/share/aws/emr/emrfs/auxlib/*:/docker/usr/share/aws/emr/goodies/lib/emr-spark-goodies.jar:/docker/usr/share/aws/emr/security/conf:/docker/usr/share/aws/emr/security/lib/*:/docker/usr/share/aws/hmclient/lib/aws-glue-datacatalog-spark-client.jar:/docker/usr/share/java/Hive-JSON-Serde/hive-openx-serde.jar:/docker/usr/share/aws/sagemaker-spark-sdk/lib/sagemaker-spark-sdk.jar:/docker/usr/share/aws/emr/s3select/lib/emr-s3-select-spark-connector.jar:/usr/share/aws/redshift/jdbc/RedshiftJDBC.jar:/usr/share/aws/redshift/spark-redshift/lib/*:/usr/share/aws/iceberg/lib/iceberg-emr-common.jar:/usr/share/aws/iceberg/lib/iceberg-spark4-runtime.jar:/usr/share/aws/delta/lib/delta-spark.jar:/usr/share/aws/delta/lib/delta-storage.jar:/usr/lib/hudi/hudi-spark-bundle.jar:/usr/lib/hudi/cli/lib/*:/usr/lib/hudi/hudi-aws-bundle.jar:/usr/lib/hudi/hudi-utilities-bundle.jar:/usr/share/aws/s3-tables-catalog/lib/*
+  ```
+
+The EMR 8.0 default values come from the `spark-defaults.conf` of the public image `public.ecr.aws/emr-serverless/spark4/emr-spark-8.0.0`; check them against your release before use.
 
 ## How to test
 
@@ -38,12 +61,11 @@ Current version is compatible with Spark 3.2 and above.
   ```
 
 * To run the integration tests
-  * Export the following environment variables with your values:
+  * The tests read credentials from the environment. Use temporary credentials of an IAM role, not long-term access keys, for example from a named profile that assumes a role (`aws sso login` or `role_arn` in `~/.aws/config`):
   ```
-  export AWS_ACCESS_KEY_ID="<your AWS access key id>"
-  export AWS_SECRET_ACCESS_KEY="<your AWS secret access key>"
+  eval "$(aws configure export-credentials --profile <profile that assumes a role> --format env)"
   export AWS_REGION=<AWS region to run the integration test>
-  
+
   export TEST_UPLOAD_S3_PATH=<s3 path to upload test s3 files - s3:// >
   export TEST_REGION=<AWS Region of SQS>
   export TEST_QUEUE_URL=<SQS URL - e.g. https://sqs.us-east-2.amazonaws.com/<accountid>/<queuename>>
@@ -52,69 +74,196 @@ Current version is compatible with Spark 3.2 and above.
   export CROSS_ACCOUNT_TEST_REGION=<cross account SQS Region>
   export CROSS_ACCOUNT_TEST_QUEUE_URL=<cross account SQS URL>
   ```
+  `aws configure export-credentials` exports `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` of the temporary session.
   * run `mvn test -Pintegration-test` or `mvn test -Pintegration-test -Dsuites='it.spark.sql.streaming.connector.S3ConnectorSourceSqsRocksDBItSuite'` (S3ConnectorSourceSqsRocksDBItSuite only )
 
-To setup cross account access: (following assumes S3 connector runs in account A to access S3 and SQS in account B)
+## Permissions
 
-1. Add following to account B's S3 bucket policy
+The connector needs only these actions at runtime: `s3:GetObject` and `s3:ListBucket` on the source prefix (S3A lists while resolving paths), and `sqs:ReceiveMessage`, `sqs:DeleteMessage` and `sqs:ChangeMessageVisibility` on the queue. The integration tests also upload and delete test files and purge the queue; give those actions only to the role that runs the tests. Scope the resources to the expected bucket and prefix: the connector reads whatever S3 path a queue message names, so the role's policy is what limits it.
+
+Identity policy of the IAM role that runs the Spark job:
 ```json
 {
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "cross account bucket",
+            "Sid": "ConnectorReadObjects",
             "Effect": "Allow",
-            "Principal": {
-                "AWS": [
-                    "arn:aws:iam::<account A id>:user/<account A user name>"
-                ]
-            },
-            "Action": [
-                "s3:GetLifecycleConfiguration",
-                "s3:ListBucket"
-            ],
-            "Resource": "arn:aws:s3:::<account B bukcet name>"
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::<bucket name>/<prefix>/*"
         },
         {
-            "Sid": "cross account object",
+            "Sid": "ConnectorListPrefix",
+            "Effect": "Allow",
+            "Action": "s3:ListBucket",
+            "Resource": "arn:aws:s3:::<bucket name>",
+            "Condition": {
+                "StringLike": {
+                    "s3:prefix": [
+                        "<prefix>",
+                        "<prefix>/*"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "ConnectorConsumeQueue",
+            "Effect": "Allow",
+            "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:ChangeMessageVisibility"
+            ],
+            "Resource": "arn:aws:sqs:<region>:<queue account id>:<queue name>"
+        },
+        {
+            "Sid": "IntegrationTestsOnly",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "sqs:GetQueueAttributes",
+                "sqs:PurgeQueue"
+            ],
+            "Resource": [
+                "arn:aws:s3:::<bucket name>/<prefix>/*",
+                "arn:aws:sqs:<region>:<queue account id>:<queue name>"
+            ]
+        }
+    ]
+}
+```
+Remove the `IntegrationTestsOnly` statement for a role that only runs the connector. The Spark job also needs its usual permissions (checkpoint location, output, logs, and on Amazon EMR possibly `s3:GetBucketLocation` for EMRFS), which are not listed here. Because `s3:ListBucket` is limited to the prefix, S3 answers a request for a missing object with 403 Access Denied instead of 404 Not Found, so a file deleted before it is read fails the batch, even with `ignoreMissingFiles`. To read the whole bucket, drop the `Condition`.
+
+SQS access policy that lets only the source bucket send S3 event notifications to the queue:
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "S3EventNotifications",
             "Effect": "Allow",
             "Principal": {
-                "AWS": [
-                    "arn:aws:iam::<account A id>:user/<account A user name>"
-                ]
+                "Service": "s3.amazonaws.com"
             },
-            "Action": [
-                "s3:*"
-            ],
-            "Resource": "arn:aws:s3:::<account B bukcet name>/*"
+            "Action": "sqs:SendMessage",
+            "Resource": "arn:aws:sqs:<region>:<queue account id>:<queue name>",
+            "Condition": {
+                "ArnEquals": {
+                    "aws:SourceArn": "arn:aws:s3:::<bucket name>"
+                },
+                "StringEquals": {
+                    "aws:SourceAccount": "<bucket owner account id>"
+                }
+            }
         }
     ]
 }
 ```
 
-2. Create a new SQS queue and add following to SQS access policy
+To set up cross account access (the connector runs in account A and reads the S3 bucket and SQS queue in account B), keep the identity policy above on the role in account A, and in account B:
+
+1. Add the following to account B's S3 bucket policy
 ```json
-    {
-      "Sid": "__crossaccount_statement",
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": [
-          "arn:aws:iam::<account A id>:user/<account A user name>"
-        ]
-      },
-      "Action": [
-        "sqs:ChangeMessageVisibility",
-        "sqs:DeleteMessage",
-        "sqs:GetQueueAttributes",
-        "sqs:PurgeQueue",
-        "sqs:ReceiveMessage",
-        "sqs:SendMessage"
-      ],
-      "Resource": "<account B SQS ARN, e.g. arn:aws:sqs:us-west-2:xxx:news3filequeue>"
-    }
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ConnectorReadObjects",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::<account A id>:role/<account A role name>"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::<account B bucket name>/<prefix>/*"
+        },
+        {
+            "Sid": "ConnectorListPrefix",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::<account A id>:role/<account A role name>"
+            },
+            "Action": "s3:ListBucket",
+            "Resource": "arn:aws:s3:::<account B bucket name>",
+            "Condition": {
+                "StringLike": {
+                    "s3:prefix": [
+                        "<prefix>",
+                        "<prefix>/*"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "IntegrationTestsOnly",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::<account A id>:role/<account A role name>"
+            },
+            "Action": [
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::<account B bucket name>/<prefix>/*"
+        }
+    ]
+}
 ```
 
-3. Configure account B's S3 bucket to send event notifications to the new SQS queue
+2. Create a new SQS queue and use the following SQS access policy
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "S3EventNotifications",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "s3.amazonaws.com"
+            },
+            "Action": "sqs:SendMessage",
+            "Resource": "arn:aws:sqs:<region>:<account B id>:<queue name>",
+            "Condition": {
+                "ArnEquals": {
+                    "aws:SourceArn": "arn:aws:s3:::<account B bucket name>"
+                },
+                "StringEquals": {
+                    "aws:SourceAccount": "<account B id>"
+                }
+            }
+        },
+        {
+            "Sid": "ConnectorConsumeQueue",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::<account A id>:role/<account A role name>"
+            },
+            "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:ChangeMessageVisibility"
+            ],
+            "Resource": "arn:aws:sqs:<region>:<account B id>:<queue name>"
+        },
+        {
+            "Sid": "IntegrationTestsOnly",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::<account A id>:role/<account A role name>"
+            },
+            "Action": [
+                "sqs:GetQueueAttributes",
+                "sqs:PurgeQueue"
+            ],
+            "Resource": "arn:aws:sqs:<region>:<account B id>:<queue name>"
+        }
+    ]
+}
+```
+
+3. Configure account B's S3 bucket to send `s3:ObjectCreated:*` event notifications for `<prefix>/` to the new SQS queue
+
+Remove the `IntegrationTestsOnly` statements when the role only runs the connector. If the bucket or the queue uses SSE-KMS, see [Security considerations](#security-considerations).
 
 ## How to use
 
@@ -125,6 +274,15 @@ After the connector jar is install in local Maven repository, configure your pro
     <groupId>com.amazonaws</groupId>
     <artifactId>spark-streaming-sql-s3-connector</artifactId>
     <version>{version}</version>
+    <!-- shaded jar for your Spark release, e.g. spark3.5.4 -->
+    <classifier>spark{spark-version}</classifier>
+    <!-- the shaded jar already bundles its dependencies (relocated); do not pull the unrelocated ones -->
+    <exclusions>
+        <exclusion>
+            <groupId>*</groupId>
+            <artifactId>*</artifactId>
+        </exclusion>
+    </exclusions>
 </dependency>
 ```
 
@@ -163,27 +321,29 @@ val inputDf = spark
   .load()
 ```
 
-A full running example is at `src/test/scala/pt/spark/sql/streaming/connector/DataConsumer.scala` which is included in `spark-streaming-sql-s3-connector-<version>-tests.jar`.
+A full running example is at `src/test/scala/pt/spark/sql/streaming/connector/DataConsumer.scala` which is included in `spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar`.
 
-Use following command to submit to Spark on Amazon EMR (Assume `spark-streaming-sql-s3-connector-<version>.jar` and `spark-streaming-sql-s3-connector-<version>-tests.jar` are copied to EMR master node and under current directory).
+Use following command to submit to Spark on Amazon EMR (Assume `spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar` and `spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar` are copied to EMR master node and under current directory).
 
 ```bash
-spark-submit --class pt.spark.sql.streaming.connector.DataConsumer --deploy-mode cluster --jars spark-streaming-sql-s3-connector-<version>.jar spark-streaming-sql-s3-connector-<version>-tests.jar  <s3 new file root path> <SQS URL> csv <checkpoint location> <s3 path to write result>
+spark-submit --class pt.spark.sql.streaming.connector.DataConsumer --deploy-mode cluster --jars spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar  <s3 new file root path> <SQS URL> csv <checkpoint location> <s3 path to write result>
 ```
 This application receives s3 event notfication from `<SQS URL>`, reads the new files from `<s3 new file root path>` and save the result to `<s3 path to write result>`.  
 
 If run with OSS Spark, `spark-submit` needs to add s3a related configurations, e.g.
 
 ```
---conf spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem --conf spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.EnvironmentVariableCredentialsProvider
+--conf spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
 ```
 
 Note: `spark.hadoop.fs.s3.impl` instead of `spark.hadoop.fs.s3a.impl` is used so that s3a can read `s3://` prefixed file paths.
 
+Credentials: use temporary credentials from an IAM role (EC2 instance profile, EKS/ECS task role, EMR job role) and do not configure long-term access keys. Leave `fs.s3a.aws.credentials.provider` unset so S3A uses its default provider chain, which picks up the role. The connector's SQS client uses the AWS SDK default credentials provider chain, which picks up the same role.
+
 Run below to generate the S3 test files to be consumed by `pt.spark.sql.streaming.connector.DataConsumer`
 
 ```bash
-spark-submit --class pt.spark.sql.streaming.connector.DataGenerator --jars ~/spark-streaming-sql-s3-connector-<version>-SNAPSHOT.jar ~/spark-streaming-sql-s3-connector-<version>-SNAPSHOT-tests.jar <s3 new file root path> <number of rows to generate> <number of partitions> <partition prefix string>
+spark-submit --class pt.spark.sql.streaming.connector.DataGenerator --jars ~/spark-streaming-sql-s3-connector-<version>-spark<spark-version>.jar ~/spark-streaming-sql-s3-connector-<version>-tests-spark<spark-version>.jar <s3 new file root path> <number of rows to generate> <number of partitions> <partition prefix string>
 ```
 
 ## How to configure
@@ -198,7 +358,8 @@ spark.s3conn.queueType| required, SQS                           | only support S
 spark.s3conn.queueFetchWaitTimeoutSeconds| requred, 2 * longPollingWaitTimeSeconds |wait time (in seconds) for fetching messages from SQS at each trigger. Message fetching is finished either messages fetched is greater than maxFilerPerTrigger or queueFetchWaitTimeoutSeconds expires.
 spark.s3conn.maxFilesPerTrigger| required,100                            |maximum number of files to process in a microbatch. -1 for unlimited
 spark.s3conn.maxFileAge| required,15d                            |maximum age of a file that can be stored in RocksDB. Files older than this will be ignored.
-spark.s3conn.pathGlobFilter| optional                                |only include S3 files with file names matching the pattern.
+spark.s3conn.pathGlobFilter| optional                                |only include S3 files whose **full path** matches the glob pattern. The path always uses the `s3://` scheme (`s3://<bucket>/<key>`), whatever scheme you read with, e.g. `s3://<bucket>/<prefix>/*.csv`; `*` also matches `/`. A pattern such as `*.csv` also matches files in other buckets.
+basePath| optional                                |root path of the S3 files, e.g. `s3://<bucket>/<prefix>/` (any of `s3`, `s3a`, `s3n`). Used by Spark for partition discovery. When set, the connector also skips (and deletes, unless `keepMessageForConsumerError` is true) messages for files that are not under this path, and logs a warning with reason `OutsideBasePath`. Give the full `s3://<bucket>/...` form: without a bucket only the path is compared. **Behaviour change in 0.0.3:** before, files outside `basePath` were not skipped.
 spark.s3conn.partitionColumns| optional                                |comma seperated partition columns. Partition columns must be defined in the schema.  Use together with "basePath" option to read from S3 folder with partitions. For example, for file s3://<testbucket>/testdatarootpath/part1=A/part2=B/testdata.csv, set "spark.s3conn.partitionColumns" -> "part1,part2", "basePath" -> "s3://<testbucket>/testdatarootpath/"
 spark.s3conn.reprocessStartBatchId| optional                                |start batch id for a reprocess run (inclusive). Note: a reprocess run will not consume new messages in SQS.
 spark.s3conn.reprocessEndBatchId| optional                                |end batch id for a reprocess run (inclusive)
@@ -207,11 +368,20 @@ spark.s3conn.sqs.longPollingWaitTimeSeconds| 10                                 
 spark.s3conn.sqs.maxConcurrency| 50                                      |number of parallel connections to Amazon SQS queue
 spark.s3conn.sqs.maxRetries| 10                                      |maximum number of consecutive retries in case of a SQS client connection failure before giving up
 spark.s3conn.sqs.visibilityTimeoutSeconds| 60                                      |SQS message visibility timeout
-spark.s3conn.sqs.keepMessageForConsumerError| false                                   |when set to true, the invalid messages with following reasons in SQS will be kept 1. the file is expired 2. the file doesn't match glob pattern 3. the file is already processed and persisted in RocksDB. This can be used with DLQ when for debug purpose
+spark.s3conn.sqs.keepMessageForConsumerError| false                                   |when set to true, the invalid messages with following reasons in SQS will be kept 1. the file is expired 2. the file doesn't match glob pattern 3. the file is already processed and persisted in RocksDB 4. the file is not under `basePath`. Kept messages come back after each visibility timeout, so pair this with a DLQ.
 
 ## How to use S3 event notifications for multiple applications
 
 If one S3 path's event notifications need to be consumed by multiple Spark Structured Streaming applications, SNS can be used to fanout to Amazon SQS queues. The message flow is S3 event notifications -> SNS -> SQS. When an S3 event notification is published to the SNS topic, Amazon SNS sends the notification to each of the subscribed SQS queues.
+
+## Security considerations
+
+- **Who can send to the queue.** The connector reads the S3 path named in each queue message. In the queue policy, grant `sqs:SendMessage` only to Amazon S3 (the `S3EventNotifications` statement in [Permissions](#permissions), with `aws:SourceArn` and `aws:SourceAccount`), and do not give it to other principals in the queue account through their identity policies. Scope the job role to the expected bucket and prefix. Set `basePath` (and a full-path `spark.s3conn.pathGlobFilter`) so messages for other paths are skipped.
+- **Queue encryption.** Use SSE-SQS, or SSE-KMS with a **customer managed** key. Amazon S3 cannot send event notifications to a queue encrypted with the AWS managed key `alias/aws/sqs`. The key policy must allow the `s3.amazonaws.com` service principal `kms:GenerateDataKey` and `kms:Decrypt` (restrict it with `aws:SourceArn` and `aws:SourceAccount` of the bucket), and the job role `kms:Decrypt`.
+- **Bucket encryption.** If the source objects use SSE-KMS, the job role needs `kms:Decrypt` on that key. The integration tests, which upload files, also need `kms:GenerateDataKey`.
+- **Cross account.** Key policies in account B (queue key and bucket key) must also allow the account A role `kms:Decrypt`, and the role's identity policy in account A must allow `kms:Decrypt` on those keys. Objects encrypted with the AWS managed key `aws/s3` cannot be read from another account; use a customer managed key for the bucket.
+- **Checkpoint location.** The checkpoint (including the connector's RocksDB state) decides which files are processed. Keep it private to the job role and encrypted; anyone who can write to it can change which files are read or skipped.
+- **Logs.** Driver logs contain S3 object keys and SQS receipt handles. Treat them like the object names they contain.
 
 ## Security
 

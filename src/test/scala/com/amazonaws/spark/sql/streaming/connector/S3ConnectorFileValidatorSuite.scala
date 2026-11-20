@@ -17,7 +17,7 @@
 
 package com.amazonaws.spark.sql.streaming.connector
 
-import com.amazonaws.spark.sql.streaming.connector.S3ConnectorSourceOptions.PATH_GLOB_FILTER
+import com.amazonaws.spark.sql.streaming.connector.S3ConnectorSourceOptions.{BASE_PATH, PATH_GLOB_FILTER}
 import com.amazonaws.spark.sql.streaming.connector.TestUtils.doReturnMock
 import com.amazonaws.spark.sql.streaming.connector.metadataLog.S3MetadataLog
 import org.mockito.ArgumentMatchers.{any, eq => meq}
@@ -79,5 +79,28 @@ class S3ConnectorFileValidatorSuite  extends S3ConnectorTestBase {
     validator.isValidNewFile("/path/partition=11/test1.csv", defaultTs) shouldBe FileValidResults.Ok
     validator.isValidNewFile("/path/partition=2/test1.csv", defaultTs) shouldBe FileValidResults.PatternNotMatch
 
+  }
+
+  test("isValidNewFile skips and counts files outside basePath") {
+    val validator = new S3ConnectorFileValidator(
+      S3ConnectorSourceOptions(defaultOptionMap + (BASE_PATH -> "s3a://bucket/root/")),
+      mockFileCache, mockMetadataLog
+    )
+
+    validator.isValidNewFile("s3://bucket/root/a.csv", defaultTs) shouldBe FileValidResults.Ok
+    validator.isValidNewFile("s3://bucket/root/p=1/a.csv", defaultTs) shouldBe FileValidResults.Ok
+    validator.isValidNewFile("s3://other/root/a.csv", defaultTs) shouldBe FileValidResults.OutsideBasePath
+    validator.isValidNewFile("s3://bucket/rootx/a.csv", defaultTs) shouldBe FileValidResults.OutsideBasePath
+    validator.isValidNewFile("s3://bucket/root/../x/a.csv", defaultTs) shouldBe FileValidResults.OutsideBasePath
+    validator.isValidNewFile("s3://bucket/a.csv", defaultTs) shouldBe FileValidResults.OutsideBasePath
+    validator.outsideBasePathCount shouldBe 4
+  }
+
+  test("isUnder") {
+    S3ConnectorFileValidator.isUnder("s3://b/root", "s3://b/root/") shouldBe true
+    S3ConnectorFileValidator.isUnder("s3://b/any/key.csv", "s3://b/") shouldBe true
+    S3ConnectorFileValidator.isUnder("s3://b/any/key.csv", "s3://b") shouldBe true
+    S3ConnectorFileValidator.isUnder("s3://b2/key.csv", "s3://b") shouldBe false
+    S3ConnectorFileValidator.isUnder("s3://b/root/with space.csv", "s3://b/root") shouldBe true
   }
 }

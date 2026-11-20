@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.LongAdder
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable.ArrayBuffer
 
-import com.amazonaws.spark.sql.streaming.connector.{FileMetadata, S3ConnectorSourceOptions, S3ConnectorTestBase}
+import com.amazonaws.spark.sql.streaming.connector.{FileMetadata, S3ConnectorFileValidator, S3ConnectorSourceOptions, S3ConnectorTestBase}
 import com.amazonaws.spark.sql.streaming.connector.S3ConnectorSourceOptions.{MAX_FILES_PER_TRIGGER, QUEUE_URL, SQS_KEEP_MESSAGE_FOR_CONSUMER_ERROR, SQS_MAX_CONCURRENCY}
 import com.amazonaws.spark.sql.streaming.connector.TestUtils.{doReturnMock, verifyMetrics}
 import com.amazonaws.spark.sql.streaming.connector.client.AsyncSqsClientImpl.MAX_SQS_BATCH_SIZE
@@ -333,6 +333,54 @@ class AsyncSqsClientSuite extends S3ConnectorTestBase{
       expectedParseMessageCount = createBatchSize
     )
 
+  }
+
+  test("AsyncSqsClientImpl clamps a future eventTime to now") {
+    val futureMsg = objectCreatedMsg.toBuilder
+      .body(objectCreatedMsg.body.replace("2023-02-14T22:53:31.748Z", "2999-01-01T00:00:00.000Z"))
+      .build
+    val timestamps = new ArrayBuffer[Long]()
+    setMockReceiveMassageResponse(mockAsyncClient, futureMsg, 1)
+
+    val before = System.currentTimeMillis()
+    asyncClient.consume((data: FileMetadata[String]) => timestamps.append(data.timestampMs)).get
+    val after = System.currentTimeMillis()
+
+    timestamps.size shouldBe 1
+    assert(timestamps.head >= before && timestamps.head <= after, timestamps)
+  }
+
+  test("AsyncSqsClientImpl keeps an eventTime within the allowed skew") {
+    val soon = System.currentTimeMillis() + 4 * 60 * 1000L
+    // S3 event format, always with milliseconds
+    val soonText = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+      .withZone(java.time.ZoneOffset.UTC).format(java.time.Instant.ofEpochMilli(soon))
+    val msg = objectCreatedMsg.toBuilder
+      .body(objectCreatedMsg.body.replace("2023-02-14T22:53:31.748Z", soonText))
+      .build
+    val timestamps = new ArrayBuffer[Long]()
+    setMockReceiveMassageResponse(mockAsyncClient, msg, 1)
+    asyncClient.consume((data: FileMetadata[String]) => timestamps.append(data.timestampMs)).get
+    timestamps shouldBe Seq(soon)
+  }
+
+  test("AsyncSqsClientImpl decodes an encoded '..' key; basePath check rejects it") {
+    val msg = objectCreatedMsg.toBuilder
+      .body(objectCreatedMsg.body.replace("valPartition%3Dpart1678486410_0/part-00000-created.csv",
+        "root/%2E%2E/other/x.csv"))
+      .build
+    val paths = new ArrayBuffer[String]()
+    setMockReceiveMassageResponse(mockAsyncClient, msg, 1)
+    asyncClient.consume((data: FileMetadata[String]) => paths.append(data.filePath)).get
+    paths shouldBe Seq("s3://testbucket/root/../other/x.csv")
+    S3ConnectorFileValidator.isUnder(paths.head, "s3://testbucket/root/") shouldBe false
+  }
+
+  test("AsyncSqsClientImpl keeps a past eventTime") {
+    val timestamps = new ArrayBuffer[Long]()
+    setMockReceiveMassageResponse(mockAsyncClient, objectCreatedMsg, 1)
+    asyncClient.consume((data: FileMetadata[String]) => timestamps.append(data.timestampMs)).get
+    timestamps shouldBe Seq(1676415211748L)
   }
 
   test("AsyncSqsClientImpl parse bad ObjectCreated message") {
