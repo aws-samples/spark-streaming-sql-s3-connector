@@ -32,6 +32,17 @@ The jar file of release 0.0.1 can also be downloaded at https://awslabs-code-us-
 
 Current version is compatible with Spark 3.2 and above.
 
+### Known limitation: EMR 8.0
+
+The connector works on EMR 8.0 (`emr-spark-8.0.0`, Spark 4.0.2). Reading, the connector's own RocksDB store and stateful queries with the default HDFS state store all pass our end-to-end tests (real S3 and SQS on EMR Serverless).
+
+A streaming query that sets `spark.sql.streaming.stateStore.providerClass` to Spark's `org.apache.spark.sql.execution.streaming.state.RocksDBStateStoreProvider` fails on EMR 8.0 with `NoSuchMethodError: org.rocksdb.Logger.<init>(org.rocksdb.InfoLogLevel)`. An older copy of the `org.rocksdb` classes on the EMR 8.0 classpath is loaded before Spark's `rocksdbjni-9.8.4.jar`. The connector jar contains no RocksDB classes or native libraries.
+
+Workarounds:
+
+- keep the default HDFS state store, or
+- use EMR 8.2 (`emr-spark-8.2.0`, Spark 4.1.3), where the same test passes.
+
 ## How to test
 
 * To run the unit tests

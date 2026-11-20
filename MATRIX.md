@@ -33,7 +33,7 @@ Spark/Scala/Hadoop/rocksdbjni columns are what the Spark open-source release shi
 | 3.5.5 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.9.0, 7.10.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.5.jar` |
 | 3.5.6 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.11.0, 7.12.0, 7.13.0 | 5.1 | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.6.jar` |
 | 3.5.8 | 2.12.18 | 3.3.4 | 8.3.2 | spark-3.5 / 11 | 7.14.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark3.5.8.jar` |
-| 4.0.2 | 2.13.16 | 3.4.1 | 9.8.4 | spark-4.0 / 17 | emr-spark-8.0.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark4.0.2.jar` |
+| 4.0.2 | 2.13.16 | 3.4.1 | 9.8.4 | spark-4.0 / 17 | emr-spark-8.0.0 ([known limitation](README.md#known-limitation-emr-80)) | | `spark-streaming-sql-s3-connector-0.0.3-spark4.0.2.jar` |
 | 4.1.1 | 2.13.17 | 3.4.2 | 9.8.4 | spark-4.1 / 17 | emr-spark-8.1.0 | 6.0 | `spark-streaming-sql-s3-connector-0.0.3-spark4.1.1.jar` |
 | 4.1.3 | 2.13.17 | 3.4.2 | 9.8.4 | spark-4.1 / 17 | emr-spark-8.2.0 | | `spark-streaming-sql-s3-connector-0.0.3-spark4.1.3.jar` |
 
