@@ -315,7 +315,8 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.1.0</version>
+          <!-- 3.4.x: the manifest has no Built-By (the builder's user name) -->
+          <version>3.4.2</version>
           <executions>
             <execution>
               <goals>

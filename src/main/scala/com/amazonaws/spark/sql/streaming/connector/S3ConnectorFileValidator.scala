@@ -39,7 +39,8 @@ class S3ConnectorFileValidator (sourceOptions: S3ConnectorSourceOptions,
   def isValidNewFile(filePath: String, timestamp: Long) : FileValidResult = {
     if (sourceOptions.basePath.exists(b => !S3ConnectorFileValidator.isUnder(filePath, b))) {
       val n = outsideBasePath.incrementAndGet()
-      logWarning(s"isValidNewFile ${filePath} is not under basePath ${sourceOptions.basePath.get}, " +
+      // the consumer logs the skipped message at WARN; keep the running count here
+      logDebug(s"isValidNewFile ${filePath} is not under basePath ${sourceOptions.basePath.get}, " +
         s"skipped ($n so far)")
       return FileValidResults.OutsideBasePath
     }

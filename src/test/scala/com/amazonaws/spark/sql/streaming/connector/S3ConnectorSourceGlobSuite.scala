@@ -39,6 +39,8 @@ class S3ConnectorSourceGlobSuite extends S3ConnectorTestBase with SharedSparkSes
     "a{b,c}.csv" -> "ab.csv"
   ).foreach { case (key, decoy) =>
     test(s"DataSource reads only the literal key '$key'") {
+      // file names with * and ? and a "file://" + absolute path need a Unix file system
+      assume(File.separatorChar == '/')
       withTestTempDir { dir =>
         Files.write(new File(dir, key).toPath, "literal\n".getBytes("UTF-8"))
         Files.write(new File(dir, decoy).toPath, "decoy\n".getBytes("UTF-8"))
