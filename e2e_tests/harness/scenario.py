@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 from .aws import Stack, assert_queues_drained
-from .events import base_options
+from .events import base_options, py_base_options
 from .fixtures import SCHEMA_DDL
 from .job import JobRun, wait_quiet
 
@@ -41,14 +41,20 @@ class Scenario:
     def options(self, fmt: str, **extra: str) -> Dict[str, str]:
         return base_options(self.queue_url, self.stack.region, fmt, **extra)
 
+    def py_options(self, fmt: str, **extra) -> Dict:
+        """read_stream() kwargs for this scenario's queue, same values as base_options."""
+        return py_base_options(self.queue_url, self.stack.region, fmt, **extra)
+
     def job(self, name: str, source_options: Dict[str, str], schema: Optional[str] = SCHEMA_DDL,
             checkpoint: Optional[str] = None, spark_conf: Optional[Dict[str, str]] = None,
-            **cfg) -> JobRun:
+            pyspark: bool = False, **cfg) -> JobRun:
+        """pyspark=True: source_options are read_stream() kwargs (see py_options)."""
         config = {"mode": "stream", "source_options": source_options, "schema": schema,
                   "checkpoint": checkpoint or self.checkpoint, "trigger_seconds": 5,
                   "max_seconds": 900}
         config.update(cfg)
-        run = JobRun(self.stack, self.artifacts, self.run_prefix, name, config, spark_conf)
+        run = JobRun(self.stack, self.artifacts, self.run_prefix, name, config, spark_conf,
+                     pyspark=pyspark)
         self.jobs.append(run)
         return run
 

@@ -2,7 +2,7 @@
 r"""One command for the whole e2e run: terraform apply -> pytest per Spark version -> destroy.
 
     python e2e_tests/run_e2e.py --connector-jar target/spark-streaming-sql-s3-connector-0.0.3-spark3.5.2.jar \
-        --release-label spark35=emr-7.5.0 [-- <pytest args>]
+        --release-label spark35=emr-7.5.0 [--suite all|core|pyspark] [-- <pytest args>]
 
     # Several Spark versions: one jar per tag (Spark 4 needs a Scala 2.13 build)
     python e2e_tests/run_e2e.py --release-label spark35=emr-7.5.0 --release-label spark40=emr-spark-8.0.0 \
@@ -27,7 +27,7 @@ TF_DIR = HERE.parent / "terraform"
 VARS_FILE = TF_DIR / "e2e.auto.tfvars.json"
 
 sys.path.insert(0, str(HERE))
-from scenarios import SCENARIOS  # noqa: E402
+from scenarios import SUITES  # noqa: E402
 
 
 def parse_labels(values: List[str]) -> Dict[str, str]:
@@ -48,7 +48,23 @@ def tf_vars(args: argparse.Namespace) -> Dict:
     if args.remote_assume_role_arn:
         remote["assume_role_arn"] = args.remote_assume_role_arn
     return {"region": args.region, "release_labels": parse_labels(args.release_label),
-            "scenarios": SCENARIOS, "remote": remote}
+            "scenarios": SUITES[getattr(args, "suite", "all")][0], "remote": remote}
+
+
+def suite_marker_args(suite: str, pytest_args: List[str]) -> List[str]:
+    """pytest_args with the suite's marker ANDed into the user's -m (pytest keeps only the last -m)."""
+    exprs = [SUITES[suite][1]] if SUITES[suite][1] else []
+    rest: List[str] = []
+    it = iter(pytest_args)
+    for a in it:
+        if a == "-m":
+            exprs.append(next(it, ""))
+        elif a.startswith("-m") and len(a) > 2:
+            exprs.append(a[2:])
+        else:
+            rest.append(a)
+    exprs = [e for e in exprs if e.strip()]
+    return (["-m", " and ".join("(%s)" % e for e in exprs)] if exprs else []) + rest
 
 
 def tf(*cmd: str) -> None:
@@ -151,6 +167,9 @@ def main(argv: List[str]) -> int:
     p.add_argument("--release-label", action="append", default=[],
                    help="TAG=EMR_RELEASE_LABEL, repeat for several Spark versions (default spark35=emr-7.5.0)")
     p.add_argument("--region", default="us-east-1")
+    p.add_argument("--suite", choices=sorted(SUITES), default="all",
+                   help="all (default), core (raw option keys, no PySpark package) or pyspark "
+                        "(through the python/ package); only the suite's queues are created")
     p.add_argument("--remote-region", help="also test a bucket and queue in this region")
     p.add_argument("--remote-assume-role-arn", help="role in a second account for the remote source")
     args = p.parse_args(argv)
@@ -172,7 +191,7 @@ def main(argv: List[str]) -> int:
         for tag in tags:
             cmd = [sys.executable, "-m", "pytest", str(HERE), "--release-tag", tag,
                    "--connector-jar", str(jars[tag]), "--junitxml", str(HERE / ("junit-%s.xml" % tag)),
-                   *pytest_args]
+                   *suite_marker_args(args.suite, pytest_args)]
             print("+ " + " ".join(cmd), flush=True)
             worst = max(worst, subprocess.run(cmd, cwd=HERE, check=False).returncode)
     finally:

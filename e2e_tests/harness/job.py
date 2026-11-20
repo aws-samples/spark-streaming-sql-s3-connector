@@ -35,8 +35,10 @@ class JobRun:
 
     def __init__(self, stack: Stack, artifacts: Dict[str, str], prefix: str, name: str,
                  config: Dict, spark_conf: Optional[Dict[str, str]] = None,
-                 timeout_minutes: int = 20):
+                 timeout_minutes: int = 20, pyspark: bool = False):
+        """pyspark=True runs job/pyspark_job.py (options are read_stream() kwargs)."""
         self.stack = stack
+        self.pyspark = pyspark
         self.artifacts = artifacts
         self.prefix = "%s/%s" % (prefix.rstrip("/"), name)  # run/<scenario>/<session>/<name>
         self.name = name
@@ -55,13 +57,17 @@ class JobRun:
         self.stack.put(config_key, json.dumps(self.config).encode())
         params = "--jars %s %s" % (self.artifacts["jar"], " ".join(
             "--conf %s=%s" % kv for kv in sorted(self.spark_conf.items())))
+        entry = self.artifacts["job"]
+        if self.pyspark:
+            entry = self.artifacts["pyspark_job"]
+            params = "--py-files %s %s" % (self.artifacts["pyspark_deps"], params)
         resp = self.stack.emr.start_job_run(
             applicationId=self.stack.app_id,
             executionRoleArn=self.stack.job_role_arn,
             name=("e2e-" + self.prefix.replace("/", "-"))[:256],
             executionTimeoutMinutes=self.timeout_minutes,
             jobDriver={"sparkSubmit": {
-                "entryPoint": self.artifacts["job"],
+                "entryPoint": entry,
                 "entryPointArguments": [self.stack.s3_uri(config_key)],
                 "sparkSubmitParameters": params,
             }},

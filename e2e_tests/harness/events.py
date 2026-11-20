@@ -50,6 +50,22 @@ def base_options(queue_url: str, queue_region: str, file_format: str,
     return opts
 
 
+def py_base_options(queue_url: str, queue_region: str, file_format: str, **extra) -> Dict:
+    """base_options() as keyword arguments of the PySpark package's read_stream()."""
+    kwargs = {
+        "file_format": file_format,
+        "queue_url": queue_url,
+        "queue_region": queue_region,
+        "queue_fetch_wait_timeout_seconds": 4,
+        "sqs_long_polling_wait_time_seconds": 2,
+        "sqs_visibility_timeout_seconds": 30,
+        "sqs_max_concurrency": 5,
+        "sqs_max_retries": 3,
+    }
+    kwargs.update(extra)
+    return kwargs
+
+
 def s3_event_time(ts: datetime) -> str:
     """S3 eventTime format; the connector parses exactly yyyy-MM-dd'T'HH:mm:ss.SSS'Z'."""
     ts = ts.astimezone(timezone.utc)

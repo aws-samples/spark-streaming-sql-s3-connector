@@ -20,13 +20,17 @@ Use temporary credentials of an IAM role for the target account in the shell (de
 `AWS_PROFILE`), not long-term access keys.
 Run one at a time per account and region with the same `name_prefix` (resource names are fixed; set
 `name_prefix` in a `terraform/*.auto.tfvars.json` file to run two stacks side by side).
-The 66 cases take about 1.5 to 2 hours per release label; the NAT gateway, Elastic IP and EMR
+The core suite takes about 1.5 to 2 hours per release label; the NAT gateway, Elastic IP and EMR
 Serverless jobs are billed while the stack exists.
 
 - More Spark versions: repeat `--release-label TAG=LABEL`, one jar per tag with
   `--connector-jar TAG=PATH`, built for that release's Spark version, e.g.
   `--release-label spark41=emr-spark-8.2.0 --connector-jar spark41=target/spark-streaming-sql-s3-connector-0.0.3-spark4.1.3.jar`
   (built with `-Pdefault-test,spark-4.1 -Dspark.version=4.1.3` on JDK 17).
+- Suites: `--suite all` (default), `--suite core` (raw option keys, as before the PySpark lane) or
+  `--suite pyspark` (15 cases through the `python/` helper package, `job/pyspark_job.py` with the
+  package on `--py-files`; about 30 to 40 minutes per release label). Only the chosen suite's
+  queues are created.
 - Cross-region: `--remote-region us-west-2`. Cross-account: add
   `--remote-assume-role-arn arn:aws:iam::<B>:role/<role>`. That role is used by Terraform
   (create a bucket, queue, policies and notification in account B) and by the harness

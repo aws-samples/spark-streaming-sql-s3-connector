@@ -14,6 +14,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from harness.aws import Stack  # noqa: E402
+from harness.pyfiles import deps_zip  # noqa: E402
 from harness.scenario import Scenario  # noqa: E402
 
 
@@ -70,7 +71,11 @@ def artifacts(stack, session_id, pytestconfig):
     prefix = "artifacts/%s/" % session_id
     stack.put(prefix + "connector.jar", jar.read_bytes())
     stack.put(prefix + "stream_job.py", (HERE / "job" / "stream_job.py").read_bytes())
-    return {"jar": stack.s3_uri(prefix + "connector.jar"), "job": stack.s3_uri(prefix + "stream_job.py")}
+    stack.put(prefix + "pyspark_job.py", (HERE / "job" / "pyspark_job.py").read_bytes())
+    stack.put(prefix + "pyspark_deps.zip", deps_zip())
+    return {"jar": stack.s3_uri(prefix + "connector.jar"), "job": stack.s3_uri(prefix + "stream_job.py"),
+            "pyspark_job": stack.s3_uri(prefix + "pyspark_job.py"),
+            "pyspark_deps": stack.s3_uri(prefix + "pyspark_deps.zip")}
 
 
 @pytest.fixture

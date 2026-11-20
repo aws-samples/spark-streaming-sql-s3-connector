@@ -158,6 +158,8 @@ def test_scenario_names_fit_terraform_validation():
             "keep_double_dot", "keep_single_dot", "reprocess", "recovery", "stateful_hdfs",
             "stateful_rocksdb", "failures", "reprocess_partial", "wrong_region", "special_keys",
             "space_key"}
+    used |= {"py_fmt_csv", "py_fmt_json", "py_fmt_parquet", "py_fmt_orc", "py_fmt_text", "py_partitions",
+             "py_options", "py_option_errors", "py_stateful_hdfs"}
     assert used == set(SCENARIOS)
     assert not {"fanout", "fanout_a", "fanout_b"} & set(SCENARIOS)  # reserved in variables.tf
 

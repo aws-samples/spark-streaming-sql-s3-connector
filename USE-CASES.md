@@ -97,6 +97,19 @@ Test ids are `e2e_tests/<file>::<test>`.
 | UC-50 | `queueFetchWaitTimeoutSeconds=0` | `IllegalArgumentException` | `[fetch_wait_zero]` |
 | UC-51 | `reprocessDryRun=maybe` | `IllegalArgumentException` | `[reprocess_dry_run_not_boolean]` |
 
+## PySpark helper package (`python/`, marker `pyspark`, `run_e2e.py --suite pyspark`)
+
+The job is `job/pyspark_job.py` with `python/src/spark_s3_connector` and `job/stream_job.py` on
+`--py-files` (a zip built by `harness/pyfiles.py`); every source is built with `read_stream(spark, schema, **kwargs)`.
+
+| ID | Use case | Expected | Test |
+|---|---|---|---|
+| UC-52 | Plain read of CSV, JSON, Parquet, ORC, text | every row once, queue drained, batch committed | `test_pyspark.py::test_pyspark_file_format[csv\|json\|parquet\|orc\|text]` |
+| UC-53 | `partition_columns=["p1", "p2"]`, `base_path` | partition values as columns | `test_pyspark.py::test_pyspark_partition_columns` |
+| UC-54 | `max_files_per_trigger=1` and `extra_options={"header": "true"}` | one file per batch; header line not a row | `test_pyspark.py::test_pyspark_option_keys_reach_connector` |
+| UC-55 | Valid kwargs read; bad kwargs raise in Python before Spark (`ValueError` / `TypeError`); a bad one-dot `sqs.maxRetries` passed through `extra_options` is rejected by the Scala parser | as listed | `test_pyspark.py::test_pyspark_option_checks[...]` |
+| UC-56 | Stateful aggregation with the default (HDFS) state store | running counts correct | `test_pyspark.py::test_pyspark_stateful_query_hdfs` |
+
 ## Not covered, and why
 
 - Mixing both `sqs.*` spellings in one query: the one-dot key wins (covered by the connector's unit tests); each E2E test uses one spelling only.

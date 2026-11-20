@@ -92,7 +92,7 @@ def load(spark, options, schema):
     return reader.load()
 
 
-def run_stream(spark, cfg):
+def run_stream(spark, cfg, loader=load):
     out = cfg["output"].rstrip("/")
     batches = []
 
@@ -120,7 +120,7 @@ def run_stream(spark, cfg):
     status = {"state": "starting", "exception": [], "batches": batches}
     query = None
     try:
-        df = load(spark, cfg["source_options"], cfg.get("schema"))
+        df = loader(spark, cfg["source_options"], cfg.get("schema"))
         if cfg.get("aggregate_by"):
             df = df.groupBy(cfg["aggregate_by"]).count()
             mode = "update"
@@ -160,7 +160,7 @@ def run_stream(spark, cfg):
     write_text(spark, out + "/status.json", json.dumps(status, default=str))
 
 
-def run_cases(spark, cfg):
+def run_cases(spark, cfg, loader=load):
     out = cfg["output"].rstrip("/")
     results = {}
     for case in cfg["cases"]:
@@ -168,7 +168,7 @@ def run_cases(spark, cfg):
         result = {"exception": [], "rows": 0}
         query = None
         try:
-            df = load(spark, case["options"], case.get("schema"))
+            df = loader(spark, case["options"], case.get("schema"))
             query = (df.writeStream
                      .option("checkpointLocation", "%s/checkpoints/%s" % (out, case["name"]))
                      .trigger(processingTime="2 seconds")
@@ -191,15 +191,16 @@ def run_cases(spark, cfg):
                json.dumps({"state": "done", "cases": results}, default=str))
 
 
-def main(argv):
+def main(argv, loader=load):
+    """loader(spark, options, schema) -> streaming DataFrame; pyspark_job.py passes its own."""
     if len(argv) != 2:
-        raise SystemExit("usage: stream_job.py <config.json s3 path>")
+        raise SystemExit("usage: %s <config.json s3 path>" % os.path.basename(argv[0]))
     spark = SparkSession.builder.appName("s3-connector-e2e").getOrCreate()
     cfg = json.loads(read_text(spark, argv[1]))
     if cfg["mode"] == "stream":
-        run_stream(spark, cfg)
+        run_stream(spark, cfg, loader)
     elif cfg["mode"] == "cases":
-        run_cases(spark, cfg)
+        run_cases(spark, cfg, loader)
     else:
         raise SystemExit("unknown mode %r" % cfg["mode"])
     spark.stop()
