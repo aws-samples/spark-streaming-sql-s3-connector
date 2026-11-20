@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spark-streaming-sql-s3-connector"
+dynamic = ["version"]
+description = "PySpark helpers for the Spark Structured Streaming S3 connector (S3 event notifications via SQS)"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.7"
+# No runtime dependencies: PySpark 3.2.1+ or 4.x is provided by EMR, Glue or your environment.
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Source = "https://github.com/aws-samples/spark-streaming-sql-s3-connector"
+
+[tool.setuptools.dynamic]
+version = { attr = "spark_s3_connector.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["spark: needs pyspark, Java and the connector jar (CONNECTOR_JAR)"]
