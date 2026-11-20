@@ -33,6 +33,9 @@
         <scalatest-maven-plugin.version>2.0.2</scalatest-maven-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <aws.java.sdk2.version>2.19.21</aws.java.sdk2.version>
+        <!-- Netty bundled (relocated) in the shaded jar. Pinned above the SDK's own Netty to pick up
+             security fixes; the spark-4.1 profile needs 4.2.x. -->
+        <netty.version>4.1.141.Final</netty.version>
         <metrics.version>4.1.36</metrics.version>
         <spark.compat.dir>scala-spark-pre41</spark.compat.dir>
         <maven.compiler.source>8</maven.compiler.source>
@@ -41,6 +44,13 @@
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>software.amazon.awssdk</groupId>
         <artifactId>bom</artifactId>
@@ -264,8 +274,8 @@
                 <filters>
                   <filter>
                     <artifact>*:*</artifact>
+                    <!-- META-INF/maven/** is kept so SCA tools can see the bundled (relocated) libraries -->
                     <excludes>
-                      <exclude>META-INF/maven/**</exclude>
                       <exclude>META-INF/MANIFEST.MF</exclude>
                       <exclude>module-info.class</exclude>
                       <exclude>META-INF/versions/*/module-info.class</exclude>
@@ -418,18 +428,6 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
       </properties>
-      <!-- Spark 4.0's Netty; also sets the Netty version relocated into the shaded jar -->
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-bom</artifactId>
-            <version>4.1.118.Final</version>
-            <type>pom</type>
-            <scope>import</scope>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
       <dependencies>
         <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
         <dependency>
@@ -456,23 +454,12 @@
         <!-- Same SDK v2 as hadoop-aws 3.4.2 (software.amazon.awssdk:bundle), see spark-4.0.
              Change it together with hadoop.version. -->
         <aws.java.sdk2.version>2.29.52</aws.java.sdk2.version>
+        <!-- Spark 4.1 needs Netty 4.2 (NioIoHandler); also the Netty relocated into the shaded jar -->
+        <netty.version>4.2.21.Final</netty.version>
         <scala.binary.version>2.13</scala.binary.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
       </properties>
-      <!-- Spark 4.1 needs Netty 4.2 (NioIoHandler); the AWS SDK Netty client resolves to 4.1 otherwise.
-           This also sets the Netty version relocated into the shaded jar. -->
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-bom</artifactId>
-            <version>4.2.7.Final</version>
-            <type>pom</type>
-            <scope>import</scope>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
       <dependencies>
         <!-- Spark 4's hadoop-aws no longer brings the AWS SDK v1 that the it.* test sources use -->
         <dependency>

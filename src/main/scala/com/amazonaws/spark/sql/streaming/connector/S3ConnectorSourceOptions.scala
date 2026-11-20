@@ -45,6 +45,9 @@ case class S3ConnectorSourceOptions (
   sqsLongPollWaitTimeSeconds: Int,
   sqsVisibilityTimeoutSeconds: Int,
   sqsKeepMessageForConsumerError: Boolean,
+
+  // When set, files from queue messages that are not under this path are skipped
+  basePath: Option[String] = None,
 )
 
 object S3ConnectorSourceOptions {
@@ -199,7 +202,8 @@ object S3ConnectorSourceOptions {
       sqsMaxRetries = sqsMaxRetries,
       sqsMaxConcurrency = sqsMaxConcurrency,
       sqsVisibilityTimeoutSeconds = sqsVisibilityTimeoutSeconds,
-      sqsKeepMessageForConsumerError = sqsKeepMessageForConsumerError
+      sqsKeepMessageForConsumerError = sqsKeepMessageForConsumerError,
+      basePath = parameters.get(BASE_PATH)
     )
   }
 

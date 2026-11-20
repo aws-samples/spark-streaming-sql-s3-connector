@@ -43,4 +43,21 @@ class S3ConnectorSourcePathSuite extends AnyFunSuite {
       uri.getPath shouldBe s"/$key"
     }
   }
+
+  // Glob characters are escaped with '\' so DataSource's globbing matches only the literal key
+  Seq(
+    "dir/a*b.csv" -> "dir/a\\*b.csv",
+    "dir/a?b.csv" -> "dir/a\\?b.csv",
+    "dir/a[1].csv" -> "dir/a\\[1\\].csv",
+    "dir/a{b,c}.csv" -> "dir/a\\{b,c\\}.csv",
+    "dir/a\\b.csv" -> "dir/a\\\\b.csv"
+  ).foreach { case (key, escaped) =>
+    test(s"toDataSourcePath escapes glob characters in '$key'") {
+      S3ConnectorSource.toDataSourcePath(s"s3://bucket/$key") shouldBe s"s3://bucket/$escaped"
+    }
+  }
+
+  test("toDataSourcePath normalises '..' (basePath check uses the same normalisation)") {
+    S3ConnectorSource.toDataSourcePath("s3://bucket/root/../other/x.csv") shouldBe "s3://bucket/other/x.csv"
+  }
 }

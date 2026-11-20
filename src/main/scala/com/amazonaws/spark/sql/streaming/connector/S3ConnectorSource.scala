@@ -288,11 +288,14 @@ class S3ConnectorSource[T](sparkSession: SparkSession,
 object S3ConnectorSource {
   val REPROCESS_LOCK_FILE = "/reprocess.lock"
 
+  // DataSource glob-expands a path with any of these characters; '\' is the glob escape.
+  private val GlobChars = "\\*?[]{}"
+
   // The path is the URL-decoded S3 key, so it can hold characters that are not legal in a URI
   // (space, '%', ...). Path(String) quotes them; new URI(path) threw URISyntaxException.
-  // shortcut: DataSource still glob-expands keys with * ? [ ] { } \ (as before); escape them here
-  // if such keys must be read literally.
-  private[connector] def toDataSourcePath(path: String): String = new Path(path).toString
+  // Glob characters are escaped so a key such as "a[1].csv" or "a*b.csv" is read as that one object.
+  private[connector] def toDataSourcePath(path: String): String =
+    new Path(path.flatMap(c => if (GlobChars.indexOf(c) >= 0) "\\" + c else c.toString)).toString
 }
 
 

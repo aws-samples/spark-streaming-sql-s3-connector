@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 import com.amazonaws.spark.sql.streaming.connector.{FileMetadata, S3ConnectorSourceOptions}
 import com.amazonaws.spark.sql.streaming.connector.Utils.{convertTimestampToMills, reportTimeTaken, shutdownAndAwaitTermination}
 import com.amazonaws.spark.sql.streaming.connector.client.AsyncQueueConsumerResults.AsyncQueueConsumerResult
-import com.amazonaws.spark.sql.streaming.connector.client.AsyncSqsClientImpl.{MAX_POOL_SIZE, MAX_SQS_BATCH_SIZE}
+import com.amazonaws.spark.sql.streaming.connector.client.AsyncSqsClientImpl.{MAX_EVENT_TIME_SKEW_MS, MAX_POOL_SIZE, MAX_SQS_BATCH_SIZE}
 import org.json4s.{DefaultFormats, MappingException}
 import org.json4s.JsonAST.JValue
 import org.json4s.jackson.JsonMethods.parse
@@ -332,7 +332,14 @@ class AsyncSqsClientImpl[T] (client: SqsAsyncClient,
 
       if (eventName.contains("ObjectCreated")) {
         val timestamp = (messageJson \ "Records" \ "eventTime").extract[Array[String]].head
-        val timestampMills = convertTimestampToMills(timestamp)
+        val eventTimeMills = convertTimestampToMills(timestamp)
+        val now = System.currentTimeMillis()
+        val timestampMills = if (eventTimeMills > now + MAX_EVENT_TIME_SKEW_MS) {
+          logWarning(s"SQS message ${message.messageId} has eventTime ${timestamp} in the future, using now")
+          now
+        } else {
+          eventTimeMills
+        }
         val path = "s3://" +
           bucketName + "/" +
           (messageJson \ "Records" \ "s3" \ "object" \ "key").extract[Array[String]].head
@@ -482,4 +489,7 @@ class AsyncSqsClientImpl[T] (client: SqsAsyncClient,
 object AsyncSqsClientImpl {
   val MAX_POOL_SIZE = 200
   val MAX_SQS_BATCH_SIZE = 10 // limit in sqs async client - up to 10 per batch
+  // An eventTime further ahead than this is clamped to now: a forged far-future time would raise the
+  // cache's latest timestamp and make later real events look expired.
+  val MAX_EVENT_TIME_SKEW_MS: Long = 5 * 60 * 1000L
 }
